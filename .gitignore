@@ -7,11 +7,12 @@
 uploads/
 test_outputs/
 *.mp4
-*.png
-*.jpg
-*.jpeg
 *.pdf
 *.docx
+
+# Permitir ícones estáticos da app
+!app/static/*.png
+!app/static/*.ico
 
 # Python
 __pycache__/
