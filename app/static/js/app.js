@@ -1,19 +1,55 @@
-// Inicializar ícones do Lucide
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.lucide) {
-    lucide.createIcons();
-  }
-  checkApiStatus();
-});
-
-// Estado global da aplicação
-let currentInputMode = "file"; // "file" ou "url"
+// Variáveis de Estado
+let currentInputMode = "file";
 let currentFile = null;
 let currentTitle = "Resumo de Conteúdo";
 let currentMarkdown = "";
 let currentViewTab = "preview";
+let activeVisualTemplate = "infographic";
+let easyMDEInstance = null;
 
-// Elementos de Modo de Entrada
+// Inicialização da Página
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  checkApiStatus();
+  initEasyMDE();
+});
+
+// Inicializar Editor Rico Open-Source EasyMDE
+function initEasyMDE() {
+  const textarea = document.getElementById('summaryEasyMDE');
+  if (textarea && !easyMDEInstance && window.EasyMDE) {
+    easyMDEInstance = new EasyMDE({
+      element: textarea,
+      spellChecker: false,
+      placeholder: "Edita o resumo aqui...",
+      status: false,
+      toolbar: [
+        "bold", "italic", "heading", "|",
+        "quote", "unordered-list", "ordered-list", "|",
+        "link", "table", "|",
+        "preview", "side-by-side", "fullscreen"
+      ],
+      minHeight: "350px",
+      autoDownloadFontAwesome: false
+    });
+
+    easyMDEInstance.codemirror.on("change", () => {
+      currentMarkdown = easyMDEInstance.value();
+      updateTitleFromMarkdown();
+    });
+  }
+}
+
+function updateTitleFromMarkdown() {
+  for (const line of currentMarkdown.split('\n')) {
+    if (line.startsWith('# ')) {
+      currentTitle = line.replace('# ', '').trim();
+      break;
+    }
+  }
+}
+
+// Elementos do DOM
 const modeFileBtn = document.getElementById('modeFileBtn');
 const modeUrlBtn = document.getElementById('modeUrlBtn');
 const fileInputSection = document.getElementById('fileInputSection');
@@ -22,7 +58,6 @@ const websiteUrlInput = document.getElementById('websiteUrlInput');
 const pasteUrlBtn = document.getElementById('pasteUrlBtn');
 const focusWrapper = document.getElementById('focusWrapper');
 
-// Elementos de Ficheiro
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const dropZonePrompt = document.getElementById('dropZonePrompt');
@@ -34,33 +69,36 @@ const videoPreview = document.getElementById('videoPreview');
 const fileNameDisplay = document.getElementById('fileNameDisplay');
 const removeFileBtn = document.getElementById('removeFileBtn');
 
-// Elementos de Configuração do Resumo
 const summaryStyle = document.getElementById('summaryStyle');
 const summaryFocus = document.getElementById('summaryFocus');
 const summaryLanguage = document.getElementById('summaryLanguage');
 const customInstructions = document.getElementById('customInstructions');
 const generateBtn = document.getElementById('generateBtn');
 
-// Elementos de Visualização e Resultados
 const emptyState = document.getElementById('emptyState');
 const loadingState = document.getElementById('loadingState');
 const loadingTitle = document.getElementById('loadingTitle');
 const loadingDesc = document.getElementById('loadingDesc');
 const summaryPreview = document.getElementById('summaryPreview');
-const summaryEditor = document.getElementById('summaryEditor');
+const editorWrapper = document.getElementById('editorWrapper');
 const exportToolbar = document.getElementById('exportToolbar');
 const viewTabs = document.getElementById('viewTabs');
 const tabPreview = document.getElementById('tabPreview');
 const tabEdit = document.getElementById('tabEdit');
 
-// Elementos de Exportação
+const printA4Btn = document.getElementById('printA4Btn');
+const openStudioBtn = document.getElementById('openStudioBtn');
+const visualStudioModal = document.getElementById('visualStudioModal');
+const closeStudioBtn = document.getElementById('closeStudioBtn');
+const cancelStudioBtn = document.getElementById('cancelStudioBtn');
+const downloadStudioImgBtn = document.getElementById('downloadStudioImgBtn');
+const visualCanvasContainer = document.getElementById('visualCanvasContainer');
+
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 const exportDocxBtn = document.getElementById('exportDocxBtn');
-const exportImageBtn = document.getElementById('exportImageBtn');
 const exportMarkdownBtn = document.getElementById('exportMarkdownBtn');
 const copyBtn = document.getElementById('copyBtn');
 
-// Modal e Status
 const apiKeyStatusBadge = document.getElementById('apiKeyStatusBadge');
 const settingsModal = document.getElementById('settingsModal');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
@@ -79,9 +117,7 @@ function showToast(message, isError = false) {
   toastIcon.setAttribute('data-lucide', isError ? 'alert-circle' : 'check-circle');
   toastIcon.className = `w-4 h-4 ${isError ? 'text-red-400' : 'text-emerald-400'}`;
 
-  if (window.lucide) {
-    lucide.createIcons();
-  }
+  if (window.lucide) lucide.createIcons();
 
   toast.classList.remove('translate-y-20', 'opacity-0');
   toast.classList.add('translate-y-0', 'opacity-100');
@@ -97,7 +133,6 @@ modeFileBtn.addEventListener('click', () => {
   currentInputMode = "file";
   modeFileBtn.className = "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm flex items-center justify-center space-x-1.5 transition-all";
   modeUrlBtn.className = "flex-1 py-2 rounded-lg text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition-all";
-  
   fileInputSection.classList.remove('hidden');
   urlInputSection.classList.add('hidden');
   focusWrapper.classList.remove('hidden');
@@ -107,14 +142,13 @@ modeUrlBtn.addEventListener('click', () => {
   currentInputMode = "url";
   modeUrlBtn.className = "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm flex items-center justify-center space-x-1.5 transition-all";
   modeFileBtn.className = "flex-1 py-2 rounded-lg text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition-all";
-  
   fileInputSection.classList.add('hidden');
   urlInputSection.classList.remove('hidden');
   focusWrapper.classList.add('hidden');
   websiteUrlInput.focus();
 });
 
-// Colar URL da área de transferência
+// Colar URL
 pasteUrlBtn.addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
@@ -127,7 +161,7 @@ pasteUrlBtn.addEventListener('click', async () => {
   }
 });
 
-// Verificar estado da Chave API no backend
+// Verificar estado da API
 async function checkApiStatus() {
   try {
     const res = await fetch('/api/status');
@@ -141,16 +175,15 @@ async function checkApiStatus() {
       apiKeyStatusBadge.onclick = () => settingsModal.classList.remove('hidden');
     }
   } catch (err) {
-    console.error("Erro ao verificar status:", err);
+    console.error(err);
   }
 }
 
-// Gestão da Chave API / Modal
+// Modal de Chave API
 openSettingsBtn.addEventListener('click', () => {
   settingsModal.classList.remove('hidden');
   apiKeyInput.focus();
 });
-
 const closeModal = () => settingsModal.classList.add('hidden');
 closeSettingsBtn.addEventListener('click', closeModal);
 cancelSettingsBtn.addEventListener('click', closeModal);
@@ -161,7 +194,6 @@ saveApiKeyBtn.addEventListener('click', async () => {
     showToast("Por favor insere uma chave válida.", true);
     return;
   }
-
   try {
     const res = await fetch('/api/set-key', {
       method: 'POST',
@@ -182,14 +214,13 @@ saveApiKeyBtn.addEventListener('click', async () => {
   }
 });
 
-// Drag & Drop Handlers
+// Drag and Drop
 ['dragenter', 'dragover'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
     dropZone.classList.add('dragover');
   });
 });
-
 ['dragleave', 'drop'].forEach(eventName => {
   dropZone.addEventListener(eventName, (e) => {
     e.preventDefault();
@@ -198,30 +229,20 @@ saveApiKeyBtn.addEventListener('click', async () => {
 });
 
 dropZone.addEventListener('drop', (e) => {
-  const dt = e.dataTransfer;
-  const files = dt.files;
-  if (files && files.length > 0) {
-    handleFileSelection(files[0]);
-  }
+  const files = e.dataTransfer.files;
+  if (files && files.length > 0) handleFileSelection(files[0]);
 });
-
 fileInput.addEventListener('change', (e) => {
-  if (e.target.files && e.target.files.length > 0) {
-    handleFileSelection(e.target.files[0]);
-  }
+  if (e.target.files && e.target.files.length > 0) handleFileSelection(e.target.files[0]);
 });
 
 function handleFileSelection(file) {
   currentFile = file;
   fileNameDisplay.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-  
   dropZonePrompt.classList.add('hidden');
   filePreviewContainer.classList.remove('hidden');
 
-  const isVid = file.type.startsWith('video/');
-  const isImg = file.type.startsWith('image/');
-
-  if (isImg) {
+  if (file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = (e) => {
       imagePreview.src = e.target.result;
@@ -230,16 +251,12 @@ function handleFileSelection(file) {
       videoPreview.pause();
     };
     reader.readAsDataURL(file);
-  } else if (isVid) {
-    const videoUrl = URL.createObjectURL(file);
-    videoPreview.src = videoUrl;
+  } else if (file.type.startsWith('video/')) {
+    videoPreview.src = URL.createObjectURL(file);
     videoPreviewWrapper.classList.remove('hidden');
     imagePreviewWrapper.classList.add('hidden');
   }
-
-  if (window.lucide) {
-    lucide.createIcons();
-  }
+  if (window.lucide) lucide.createIcons();
 }
 
 removeFileBtn.addEventListener('click', (e) => {
@@ -252,77 +269,65 @@ removeFileBtn.addEventListener('click', (e) => {
   dropZonePrompt.classList.remove('hidden');
 });
 
-// Alternar entre Separadores Formatado / Editar
+// Separadores Formatado / Editar (EasyMDE)
 tabPreview.addEventListener('click', () => {
   if (currentViewTab === "preview") return;
   currentViewTab = "preview";
-  tabPreview.className = "px-3 py-1 rounded-md bg-white text-slate-800 shadow-sm transition-all";
-  tabEdit.className = "px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition-all";
+  tabPreview.className = "px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all flex items-center gap-1.5";
+  tabEdit.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
 
-  currentMarkdown = summaryEditor.value;
+  if (easyMDEInstance) {
+    currentMarkdown = easyMDEInstance.value();
+    updateTitleFromMarkdown();
+  }
   summaryPreview.innerHTML = marked.parse(currentMarkdown);
-  summaryEditor.classList.add('hidden');
+  editorWrapper.classList.add('hidden');
   summaryPreview.classList.remove('hidden');
 });
 
 tabEdit.addEventListener('click', () => {
   if (currentViewTab === "edit") return;
   currentViewTab = "edit";
-  tabEdit.className = "px-3 py-1 rounded-md bg-white text-slate-800 shadow-sm transition-all";
-  tabPreview.className = "px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition-all";
+  tabEdit.className = "px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all flex items-center gap-1.5";
+  tabPreview.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
 
-  summaryEditor.value = currentMarkdown;
-  summaryPreview.classList.add('hidden');
-  summaryEditor.classList.remove('hidden');
-});
-
-summaryEditor.addEventListener('input', () => {
-  currentMarkdown = summaryEditor.value;
-  for (const line of currentMarkdown.split('\n')) {
-    if (line.startsWith('# ')) {
-      currentTitle = line.replace('# ', '').trim();
-      break;
-    }
+  if (easyMDEInstance) {
+    easyMDEInstance.value(currentMarkdown);
   }
+  summaryPreview.classList.add('hidden');
+  editorWrapper.classList.remove('hidden');
 });
 
 // Ação de Gerar Resumo
 generateBtn.addEventListener('click', async () => {
   const savedLocalKey = localStorage.getItem("gemini_api_key") || "";
 
-  // Validação conforme o modo
-  if (currentInputMode === "file") {
-    if (!currentFile) {
-      showToast("Por favor carrega uma imagem ou vídeo primeiro.", true);
-      return;
-    }
-  } else if (currentInputMode === "url") {
+  if (currentInputMode === "file" && !currentFile) {
+    showToast("Por favor carrega uma imagem ou vídeo primeiro.", true);
+    return;
+  }
+  if (currentInputMode === "url") {
     const url = websiteUrlInput.value.trim();
     if (!url) {
-      showToast("Por favor insere o link do website.", true);
+      showToast("Por favor insere o link do vídeo ou website.", true);
       return;
-    }
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      websiteUrlInput.value = 'https://' + url;
     }
   }
 
-  // Interface em estado de carregamento
   generateBtn.disabled = true;
   emptyState.classList.add('hidden');
   summaryPreview.classList.add('hidden');
-  summaryEditor.classList.add('hidden');
+  editorWrapper.classList.add('hidden');
   exportToolbar.classList.add('hidden');
   viewTabs.classList.add('hidden');
   loadingState.classList.remove('hidden');
 
   if (currentInputMode === "url") {
-    loadingTitle.textContent = "A extrair página web e analisar...";
-    loadingDesc.textContent = "A ler o artigo e a sintetizar os pontos principais com a IA.";
+    loadingTitle.textContent = "A extrair e processar link...";
+    loadingDesc.textContent = "A analisar transcrições/conteúdo e a estruturar o resumo.";
   } else {
-    const isVideo = currentFile && currentFile.type.startsWith('video/');
-    loadingTitle.textContent = isVideo ? "A processar vídeo e extrair texto..." : "A analisar imagem e OCR...";
-    loadingDesc.textContent = "A IA está a examinar o conteúdo e a gerar o resumo estruturado.";
+    loadingTitle.textContent = "A analisar ficheiro com IA...";
+    loadingDesc.textContent = "A examinar imagem, vídeo e texto para gerar a síntese.";
   }
 
   try {
@@ -336,10 +341,7 @@ generateBtn.addEventListener('click', async () => {
       formData.append('custom_instructions', customInstructions.value.trim());
       if (savedLocalKey) formData.append('api_key', savedLocalKey);
 
-      res = await fetch('/api/summarize', {
-        method: 'POST',
-        body: formData
-      });
+      res = await fetch('/api/summarize', { method: 'POST', body: formData });
     } else {
       res = await fetch('/api/summarize-url', {
         method: 'POST',
@@ -347,6 +349,7 @@ generateBtn.addEventListener('click', async () => {
         body: JSON.stringify({
           url: websiteUrlInput.value.trim(),
           style: summaryStyle.value,
+          focus: summaryFocus.value,
           language: summaryLanguage.value,
           custom_instructions: customInstructions.value.trim(),
           api_key: savedLocalKey
@@ -355,17 +358,13 @@ generateBtn.addEventListener('click', async () => {
     }
 
     const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.detail || "Erro ao processar o conteúdo.");
-    }
+    if (!res.ok) throw new Error(data.detail || "Erro ao processar o conteúdo.");
 
     currentMarkdown = data.markdown;
     currentTitle = data.title || "Resumo de Conteúdo";
 
-    // Atualizar UI com o resultado
     summaryPreview.innerHTML = marked.parse(currentMarkdown);
-    summaryEditor.value = currentMarkdown;
+    if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
 
     loadingState.classList.add('hidden');
     summaryPreview.classList.remove('hidden');
@@ -373,9 +372,7 @@ generateBtn.addEventListener('click', async () => {
     viewTabs.classList.remove('hidden');
 
     showToast("Resumo gerado com sucesso!");
-    if (window.lucide) {
-      lucide.createIcons();
-    }
+    if (window.lucide) lucide.createIcons();
 
   } catch (err) {
     console.error(err);
@@ -387,9 +384,283 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
-// Funções de Exportação
+// =========================================================
+// IMPRESSÃO A4 COM PAGINAÇÃO INTELIGENTE
+// =========================================================
+printA4Btn.addEventListener('click', () => {
+  if (currentViewTab === "edit" && easyMDEInstance) {
+    currentMarkdown = easyMDEInstance.value();
+    summaryPreview.innerHTML = marked.parse(currentMarkdown);
+  }
+  window.print();
+});
+
+// =========================================================
+// MOTOR VISUAL MULTI-ESTILOS (ESTÚDIO VISUAL)
+// =========================================================
+openStudioBtn.addEventListener('click', () => {
+  if (currentViewTab === "edit" && easyMDEInstance) {
+    currentMarkdown = easyMDEInstance.value();
+    updateTitleFromMarkdown();
+  }
+  renderVisualCanvas(activeVisualTemplate);
+  visualStudioModal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+});
+
+const closeStudio = () => visualStudioModal.classList.add('hidden');
+closeStudioBtn.addEventListener('click', closeStudio);
+cancelStudioBtn.addEventListener('click', closeStudio);
+
+// Seletor de Estilos no Modal
+document.querySelectorAll('.style-select-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.style-select-btn').forEach(b => {
+      b.className = "style-select-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-1.5";
+    });
+    const target = e.currentTarget;
+    target.className = "style-select-btn px-3 py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5";
+    activeVisualTemplate = target.getAttribute('data-style');
+    renderVisualCanvas(activeVisualTemplate);
+  });
+});
+
+// Parser de Markdown em Secções Estruturadas
+function parseMarkdownSections(md) {
+  const sections = [];
+  let currentSection = { title: "Visão Geral", items: [], text: "" };
+  const lines = md.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('# ')) {
+      // Título principal ignorado nas secções
+      continue;
+    } else if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) {
+      if (currentSection.items.length > 0 || currentSection.text.trim()) {
+        sections.push(currentSection);
+      }
+      currentSection = { title: trimmed.replace(/^#+\s*/, ''), items: [], text: "" };
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s+/.test(trimmed)) {
+      currentSection.items.push(trimmed.replace(/^[-*]\s+|\d+\.\s+/, ''));
+    } else if (trimmed) {
+      currentSection.text += (currentSection.text ? " " : "") + trimmed;
+    }
+  }
+  if (currentSection.items.length > 0 || currentSection.text.trim()) {
+    sections.push(currentSection);
+  }
+  return sections;
+}
+
+// Renderizar o Design Selecionado no Container
+function renderVisualCanvas(style) {
+  const sections = parseMarkdownSections(currentMarkdown);
+  const nowStr = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  let html = "";
+
+  if (style === "infographic") {
+    html = `
+      <div class="template-infographic p-8 space-y-6">
+        <div class="border-b border-slate-200 pb-5">
+          <div class="inline-block px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold uppercase tracking-wider mb-2">Resumo Inteligente</div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">${currentTitle}</h1>
+          <p class="text-xs text-slate-500 mt-2">Síntese visual gerada em ${nowStr}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ${sections.map((sec, idx) => `
+            <div class="card-box p-5 ${idx === 0 ? 'md:col-span-2 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 border-teal-200' : ''}">
+              <h3 class="text-base font-bold text-teal-800 mb-2.5 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+                ${sec.title}
+              </h3>
+              ${sec.text ? `<p class="text-xs sm:text-sm text-slate-700 leading-relaxed mb-3">${sec.text}</p>` : ''}
+              ${sec.items.length > 0 ? `
+                <ul class="space-y-1.5 text-xs sm:text-sm text-slate-800">
+                  ${sec.items.map(item => `<li class="flex items-start gap-2"><span class="text-teal-600 font-bold">•</span><span>${item}</span></li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "handwritten") {
+    html = `
+      <div class="template-handwritten p-8 space-y-6 relative border-4 border-slate-800 rounded-2xl bg-amber-50/30">
+        <div class="border-b-2 border-dashed border-slate-700 pb-4 text-center">
+          <h1 class="font-bold">${currentTitle}</h1>
+          <p class="text-lg text-slate-600 mt-1">Notas e Destaques • ${nowStr}</p>
+        </div>
+        <div class="space-y-6">
+          ${sections.map(sec => `
+            <div class="p-4 border-2 border-slate-700 rounded-xl bg-white shadow-sm">
+              <h2 class="font-bold border-b border-slate-300 pb-1 mb-2">${sec.title}</h2>
+              ${sec.text ? `<p class="text-lg text-slate-800 mb-2">${sec.text}</p>` : ''}
+              ${sec.items.length > 0 ? `
+                <ul class="space-y-1 text-lg text-slate-900">
+                  ${sec.items.map(item => `<li>👉 ${item}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "postits") {
+    const colors = ["postit-yellow", "postit-cyan", "postit-pink", "postit-green"];
+    html = `
+      <div class="template-postits p-8 space-y-6">
+        <div class="text-center pb-4">
+          <h1 class="text-2xl font-bold text-slate-800">${currentTitle}</h1>
+          <p class="text-xs text-slate-500 mt-1">Quadro de Notas Rápidas • ${nowStr}</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          ${sections.map((sec, idx) => `
+            <div class="${colors[idx % colors.length]} p-5 rounded-xl border border-black/10">
+              <div class="w-3 h-3 rounded-full bg-red-400 mx-auto mb-2 shadow-sm border border-red-500"></div>
+              <h3 class="font-bold text-sm text-slate-900 mb-2 border-b border-black/10 pb-1">${sec.title}</h3>
+              ${sec.text ? `<p class="text-xs text-slate-800 mb-2 leading-relaxed">${sec.text}</p>` : ''}
+              ${sec.items.map(item => `<p class="text-xs text-slate-900 font-medium mb-1">📌 ${item}</p>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "bento") {
+    html = `
+      <div class="template-bento p-8 space-y-6 rounded-2xl">
+        <div class="border-b border-slate-800 pb-4">
+          <span class="text-[11px] font-mono uppercase tracking-widest text-teal-400">Bento Summary</span>
+          <h1 class="text-2xl sm:text-3xl font-bold text-white mt-1">${currentTitle}</h1>
+          <p class="text-xs text-slate-400 mt-1">Linear UI Layout • ${nowStr}</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          ${sections.map((sec, idx) => `
+            <div class="bento-item p-5 ${idx === 0 ? 'md:col-span-2' : ''} ${idx === 1 ? 'md:col-span-1' : ''}">
+              <h3 class="text-sm font-bold text-teal-300 mb-2 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                ${sec.title}
+              </h3>
+              ${sec.text ? `<p class="text-xs text-slate-300 leading-relaxed mb-3">${sec.text}</p>` : ''}
+              ${sec.items.length > 0 ? `
+                <ul class="space-y-1.5 text-xs text-slate-200">
+                  ${sec.items.map(item => `<li class="flex items-start gap-1.5"><span class="text-teal-400">›</span><span>${item}</span></li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "timeline") {
+    html = `
+      <div class="template-timeline p-8 space-y-6">
+        <div class="border-b border-slate-200 pb-4">
+          <h1 class="text-2xl font-bold text-slate-900">${currentTitle}</h1>
+          <p class="text-xs text-slate-500 mt-1">Linha do Tempo e Passos • ${nowStr}</p>
+        </div>
+        <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-300">
+          ${sections.map((sec, idx) => `
+            <div class="relative">
+              <div class="absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-teal-600 border-2 border-white shadow"></div>
+              <h3 class="text-sm font-bold text-teal-800 mb-1">Passo ${idx + 1}: ${sec.title}</h3>
+              ${sec.text ? `<p class="text-xs text-slate-700 leading-relaxed mb-2">${sec.text}</p>` : ''}
+              ${sec.items.map(item => `<p class="text-xs text-slate-800 font-medium pl-2 border-l border-slate-200 my-1">⏱️ ${item}</p>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "editorial") {
+    html = `
+      <div class="template-editorial p-8 space-y-6 bg-[#fdfbf7] border-t-8 border-slate-900">
+        <div class="text-center border-b-2 border-slate-900 pb-4">
+          <p class="text-xs tracking-widest uppercase font-bold text-slate-600">Edição Especial de Síntese</p>
+          <h1 class="text-3xl font-bold text-slate-900 mt-2">${currentTitle}</h1>
+          <p class="text-xs italic text-slate-500 mt-1">Publicado em ${nowStr} • Inteligência Artificial</p>
+        </div>
+        <div class="space-y-5">
+          ${sections.map((sec, idx) => `
+            <div class="border-b border-slate-200 pb-4">
+              <h2 class="text-lg font-bold text-slate-900 italic mb-2">${sec.title}</h2>
+              ${sec.text ? `<p class="text-sm text-slate-800 leading-relaxed ${idx === 0 ? 'dropcap' : ''}">${sec.text}</p>` : ''}
+              ${sec.items.length > 0 ? `
+                <ul class="mt-2 space-y-1 text-sm text-slate-800">
+                  ${sec.items.map(item => `<li>— ${item}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (style === "terminal") {
+    html = `
+      <div class="template-terminal p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
+          <div class="w-3 h-3 rounded-full bg-red-500"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <span class="text-xs text-slate-400 font-mono ml-2">summary@gemini:~$ cat resumo.md</span>
+        </div>
+        <div class="space-y-4 font-mono text-xs">
+          <div>
+            <span class="terminal-green font-bold"># ${currentTitle}</span>
+            <p class="text-slate-400 text-[11px]">Date: ${nowStr}</p>
+          </div>
+          ${sections.map(sec => `
+            <div>
+              <p class="terminal-yellow font-bold">## [${sec.title}]</p>
+              ${sec.text ? `<p class="text-slate-300 leading-relaxed pl-2">${sec.text}</p>` : ''}
+              ${sec.items.map(item => `<p class="text-slate-200 pl-4">> ${item}</p>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  visualCanvasContainer.innerHTML = html;
+}
+
+// Descarregar Imagem PNG em Alta Resolução (html2canvas)
+downloadStudioImgBtn.addEventListener('click', async () => {
+  if (!window.html2canvas) {
+    showToast("Biblioteca de imagem não carregada.", true);
+    return;
+  }
+
+  showToast("A gerar imagem HD em alta resolução...");
+  downloadStudioImgBtn.disabled = true;
+
+  try {
+    const canvas = await html2canvas(visualCanvasContainer, {
+      scale: 2, // 2x resolução (Retina / HD)
+      useCORS: true,
+      backgroundColor: null,
+      logging: false
+    });
+
+    const link = document.createElement('a');
+    const cleanName = currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_') || 'resumo_visual';
+    link.download = `${cleanName}_${activeVisualTemplate}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast("Imagem descarregada com sucesso!");
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao gerar imagem: " + err.message, true);
+  } finally {
+    downloadStudioImgBtn.disabled = false;
+  }
+});
+
+// =========================================================
+// EXPORTAÇÕES STANDARD (PDF, Word, Markdown, Copiar)
+// =========================================================
 async function triggerExport(endpoint, fileExtension) {
-  const contentToExport = currentViewTab === "edit" ? summaryEditor.value : currentMarkdown;
+  const contentToExport = currentViewTab === "edit" && easyMDEInstance ? easyMDEInstance.value() : currentMarkdown;
   if (!contentToExport) {
     showToast("Nenhum conteúdo para exportar.", true);
     return;
@@ -437,12 +708,11 @@ async function triggerExport(endpoint, fileExtension) {
 
 exportPdfBtn.addEventListener('click', () => triggerExport('/api/export/pdf', 'pdf'));
 exportDocxBtn.addEventListener('click', () => triggerExport('/api/export/docx', 'docx'));
-exportImageBtn.addEventListener('click', () => triggerExport('/api/export/image', 'png'));
 exportMarkdownBtn.addEventListener('click', () => triggerExport('/api/export/markdown', 'md'));
 
 // Copiar para a área de transferência
 copyBtn.addEventListener('click', async () => {
-  const text = currentViewTab === "edit" ? summaryEditor.value : currentMarkdown;
+  const text = currentViewTab === "edit" && easyMDEInstance ? easyMDEInstance.value() : currentMarkdown;
   if (!text) {
     showToast("Nenhum conteúdo para copiar.", true);
     return;

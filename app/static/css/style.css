@@ -1,42 +1,243 @@
-/* Estilos adicionais e melhorias de UI */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Import de Fontes Google para múltiplos estilos visuais */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Scrollbars customizadas suaves */
+/* Scrollbars customizadas */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Animações */
-@keyframes pulseSlow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-pulse-slow {
-  animation: pulseSlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Transições suaves para drag and drop */
+/* Transição suave de Drag & Drop */
 #dropZone.dragover {
   border-color: #0d9488;
   background-color: rgba(204, 251, 241, 0.4);
   transform: scale(1.01);
+}
+
+/* ===================================================
+   REGRAS DE IMPRESSÃO A4 PROFISSIONAL (@media print)
+   =================================================== */
+@media print {
+  /* Ocultar elementos desnecessários na folha impressa */
+  header, #dropZone, .lg\:col-span-5, #exportToolbar, #viewTabs, 
+  #openSettingsBtn, #apiKeyStatusBadge, #settingsModal, #visualStudioModal,
+  #toast, .no-print {
+    display: none !important;
+  }
+
+  body, main {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #000000 !important;
+  }
+
+  .lg\:col-span-7 {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Formatação da página A4 */
+  @page {
+    size: A4 portrait;
+    margin: 18mm 15mm 18mm 15mm;
+  }
+
+  #summaryPreview {
+    display: block !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    color: #1e293b !important;
+  }
+
+  /* Evitar quebras de página indesejadas */
+  h1, h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  p, li, blockquote, .print-block {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1 {
+    font-size: 20pt !important;
+    color: #0f766e !important;
+    border-bottom: 2pt solid #0f766e !important;
+    padding-bottom: 4pt !important;
+    margin-bottom: 12pt !important;
+  }
+
+  h2 {
+    font-size: 14pt !important;
+    color: #0f766e !important;
+    margin-top: 14pt !important;
+    margin-bottom: 6pt !important;
+    border-bottom: 1pt solid #e2e8f0 !important;
+  }
+
+  h3 {
+    font-size: 12pt !important;
+    color: #334155 !important;
+  }
+
+  ul, ol {
+    margin-bottom: 10pt !important;
+  }
+
+  li {
+    margin-bottom: 3pt !important;
+  }
+}
+
+/* ===================================================
+   ESTILOS DOS TEMPLATES VISUAIS DE RESUMO
+   =================================================== */
+
+/* 1. Estilo Infográfico Moderno */
+.template-infographic {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1e293b;
+}
+.template-infographic .card-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+/* 2. Estilo Manuscrito / Sketch (Quadro) */
+.template-handwritten {
+  font-family: 'Caveat', cursive;
+  background: #fffdfa;
+  color: #2c3e50;
+  letter-spacing: 0.5px;
+}
+.template-handwritten h1 {
+  font-size: 2.7rem;
+  color: #0d9488;
+}
+.template-handwritten h2 {
+  font-size: 2rem;
+  color: #c2410c;
+}
+.template-handwritten p, .template-handwritten li {
+  font-size: 1.5rem;
+  line-height: 1.4;
+}
+
+/* 3. Estilo Post-its */
+.template-postits {
+  background: #fdfbf7;
+}
+.postit-yellow {
+  background: #fef08a;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.08);
+  transform: rotate(-1deg);
+}
+.postit-cyan {
+  background: #a5f3fc;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.08);
+  transform: rotate(1deg);
+}
+.postit-pink {
+  background: #fbcfe8;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.08);
+  transform: rotate(-0.5deg);
+}
+.postit-green {
+  background: #bbf7d0;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.08);
+  transform: rotate(0.8deg);
+}
+
+/* 4. Estilo Bento Grid */
+.template-bento {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+}
+.bento-item {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 20px;
+}
+
+/* 5. Estilo Timeline */
+.template-timeline {
+  background: #ffffff;
+}
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0d9488;
+  border: 3px solid #ccfbf1;
+}
+.timeline-line {
+  width: 2px;
+  background: #cbd5e1;
+}
+
+/* 6. Estilo Editorial / Jornal */
+.template-editorial {
+  font-family: 'Playfair Display', Georgia, serif;
+  background: #fbfbf9;
+  color: #1a1a1a;
+}
+.template-editorial .dropcap::first-letter {
+  font-size: 3.8rem;
+  float: left;
+  line-height: 0.8;
+  margin-right: 8px;
+  color: #0f766e;
+}
+
+/* 7. Estilo Terminal Retro */
+.template-terminal {
+  font-family: 'Fira Code', monospace;
+  background: #0d1117;
+  color: #58a6ff;
+  border-radius: 12px;
+}
+.template-terminal .terminal-green {
+  color: #3fb950;
+}
+.template-terminal .terminal-yellow {
+  color: #d29922;
+}
+
+/* Personalização do EasyMDE */
+.EasyMDEContainer .editor-toolbar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+.EasyMDEContainer .CodeMirror {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-color: #e2e8f0;
+  font-family: 'Fira Code', monospace;
+  font-size: 13.5px;
+  background: #ffffff;
 }
