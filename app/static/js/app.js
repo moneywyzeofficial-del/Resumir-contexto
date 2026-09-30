@@ -630,10 +630,10 @@ cancelStudioBtn.addEventListener('click', closeStudio);
 document.querySelectorAll('.style-select-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     document.querySelectorAll('.style-select-btn').forEach(b => {
-      b.className = "style-select-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-1.5";
+      b.className = "style-select-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-1.5 active:scale-95";
     });
     const target = e.currentTarget;
-    target.className = "style-select-btn px-3 py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5";
+    target.className = "style-select-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-xs transition-all flex items-center gap-1.5 active:scale-95";
     activeVisualTemplate = target.getAttribute('data-style');
     renderVisualCanvas(activeVisualTemplate);
   });
@@ -675,18 +675,18 @@ function renderVisualCanvas(style) {
 
   if (style === "infographic") {
     html = `
-      <div class="template-infographic p-8 space-y-6">
-        <div class="border-b border-slate-200 pb-5">
+      <div class="template-infographic p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div class="border-b border-slate-200 pb-4 sm:pb-5">
           <div class="inline-block px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold uppercase tracking-wider mb-2">Resumo Inteligente</div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">${currentTitle}</h1>
-          <p class="text-xs text-slate-500 mt-2">Síntese visual gerada em ${nowStr}</p>
+          <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 leading-tight">${currentTitle}</h1>
+          <p class="text-xs text-slate-500 mt-1.5">Síntese visual gerada em ${nowStr}</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           ${sections.map((sec, idx) => `
-            <div class="card-box p-5 ${idx === 0 ? 'md:col-span-2 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 border-teal-200' : ''}">
-              <h3 class="text-base font-bold text-teal-800 mb-2.5 flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-                ${sec.title}
+            <div class="card-box p-4 sm:p-5 ${idx === 0 ? 'md:col-span-2 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 border-teal-200' : ''}">
+              <h3 class="text-sm sm:text-base font-bold text-teal-800 mb-2 sm:mb-2.5 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0"></span>
+                <span class="truncate">${sec.title}</span>
               </h3>
               ${sec.text ? `<p class="text-xs sm:text-sm text-slate-700 leading-relaxed mb-3">${sec.text}</p>` : ''}
               ${sec.items.length > 0 ? `
@@ -701,18 +701,18 @@ function renderVisualCanvas(style) {
     `;
   } else if (style === "handwritten") {
     html = `
-      <div class="template-handwritten p-8 space-y-6 relative border-4 border-slate-800 rounded-2xl bg-amber-50/30">
-        <div class="border-b-2 border-dashed border-slate-700 pb-4 text-center">
-          <h1 class="font-bold">${currentTitle}</h1>
-          <p class="text-lg text-slate-600 mt-1">Notas e Destaques • ${nowStr}</p>
+      <div class="template-handwritten p-4 sm:p-8 space-y-4 sm:space-y-6 relative border-2 sm:border-4 border-slate-800 rounded-2xl bg-amber-50/30">
+        <div class="border-b-2 border-dashed border-slate-700 pb-3 sm:pb-4 text-center">
+          <h1 class="text-2xl sm:text-3xl font-bold">${currentTitle}</h1>
+          <p class="text-base sm:text-lg text-slate-600 mt-1">Notas e Destaques • ${nowStr}</p>
         </div>
-        <div class="space-y-6">
+        <div class="space-y-4 sm:space-y-6">
           ${sections.map(sec => `
-            <div class="p-4 border-2 border-slate-700 rounded-xl bg-white shadow-sm">
-              <h2 class="font-bold border-b border-slate-300 pb-1 mb-2">${sec.title}</h2>
-              ${sec.text ? `<p class="text-lg text-slate-800 mb-2">${sec.text}</p>` : ''}
+            <div class="p-3.5 sm:p-4 border-2 border-slate-700 rounded-xl bg-white shadow-xs">
+              <h2 class="text-xl sm:text-2xl font-bold border-b border-slate-300 pb-1 mb-2">${sec.title}</h2>
+              ${sec.text ? `<p class="text-base sm:text-lg text-slate-800 mb-2">${sec.text}</p>` : ''}
               ${sec.items.length > 0 ? `
-                <ul class="space-y-1 text-lg text-slate-900">
+                <ul class="space-y-1 text-base sm:text-lg text-slate-900">
                   ${sec.items.map(item => `<li>👉 ${item}</li>`).join('')}
                 </ul>
               ` : ''}
@@ -724,15 +724,15 @@ function renderVisualCanvas(style) {
   } else if (style === "postits") {
     const colors = ["postit-yellow", "postit-cyan", "postit-pink", "postit-green"];
     html = `
-      <div class="template-postits p-8 space-y-6">
-        <div class="text-center pb-4">
-          <h1 class="text-2xl font-bold text-slate-800">${currentTitle}</h1>
+      <div class="template-postits p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div class="text-center pb-3 sm:pb-4">
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800">${currentTitle}</h1>
           <p class="text-xs text-slate-500 mt-1">Quadro de Notas Rápidas • ${nowStr}</p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           ${sections.map((sec, idx) => `
-            <div class="${colors[idx % colors.length]} p-5 rounded-xl border border-black/10">
-              <div class="w-3 h-3 rounded-full bg-red-400 mx-auto mb-2 shadow-sm border border-red-500"></div>
+            <div class="${colors[idx % colors.length]} p-4 sm:p-5 rounded-xl border border-black/10">
+              <div class="w-3 h-3 rounded-full bg-red-400 mx-auto mb-2 shadow-xs border border-red-500"></div>
               <h3 class="font-bold text-sm text-slate-900 mb-2 border-b border-black/10 pb-1">${sec.title}</h3>
               ${sec.text ? `<p class="text-xs text-slate-800 mb-2 leading-relaxed">${sec.text}</p>` : ''}
               ${sec.items.map(item => `<p class="text-xs text-slate-900 font-medium mb-1">📌 ${item}</p>`).join('')}
@@ -743,18 +743,18 @@ function renderVisualCanvas(style) {
     `;
   } else if (style === "bento") {
     html = `
-      <div class="template-bento p-8 space-y-6 rounded-2xl">
-        <div class="border-b border-slate-800 pb-4">
+      <div class="template-bento p-4 sm:p-8 space-y-4 sm:space-y-6 rounded-2xl">
+        <div class="border-b border-slate-800 pb-3 sm:pb-4">
           <span class="text-[11px] font-mono uppercase tracking-widest text-teal-400">Bento Summary</span>
-          <h1 class="text-2xl sm:text-3xl font-bold text-white mt-1">${currentTitle}</h1>
+          <h1 class="text-xl sm:text-3xl font-bold text-white mt-1">${currentTitle}</h1>
           <p class="text-xs text-slate-400 mt-1">Linear UI Layout • ${nowStr}</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
           ${sections.map((sec, idx) => `
-            <div class="bento-item p-5 ${idx === 0 ? 'md:col-span-2' : ''} ${idx === 1 ? 'md:col-span-1' : ''}">
+            <div class="bento-item p-4 sm:p-5 ${idx === 0 ? 'md:col-span-2' : ''} ${idx === 1 ? 'md:col-span-1' : ''}">
               <h3 class="text-sm font-bold text-teal-300 mb-2 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
-                ${sec.title}
+                <span class="w-2 h-2 rounded-full bg-teal-400 shrink-0"></span>
+                <span>${sec.title}</span>
               </h3>
               ${sec.text ? `<p class="text-xs text-slate-300 leading-relaxed mb-3">${sec.text}</p>` : ''}
               ${sec.items.length > 0 ? `
@@ -769,15 +769,15 @@ function renderVisualCanvas(style) {
     `;
   } else if (style === "timeline") {
     html = `
-      <div class="template-timeline p-8 space-y-6">
-        <div class="border-b border-slate-200 pb-4">
-          <h1 class="text-2xl font-bold text-slate-900">${currentTitle}</h1>
+      <div class="template-timeline p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div class="border-b border-slate-200 pb-3 sm:pb-4">
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-900">${currentTitle}</h1>
           <p class="text-xs text-slate-500 mt-1">Linha do Tempo e Passos • ${nowStr}</p>
         </div>
-        <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-300">
+        <div class="relative pl-5 sm:pl-6 space-y-5 sm:space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-300">
           ${sections.map((sec, idx) => `
             <div class="relative">
-              <div class="absolute -left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-teal-600 border-2 border-white shadow"></div>
+              <div class="absolute -left-[25px] sm:-left-[27px] top-1.5 w-3.5 h-3.5 rounded-full bg-teal-600 border-2 border-white shadow-xs"></div>
               <h3 class="text-sm font-bold text-teal-800 mb-1">Passo ${idx + 1}: ${sec.title}</h3>
               ${sec.text ? `<p class="text-xs text-slate-700 leading-relaxed mb-2">${sec.text}</p>` : ''}
               ${sec.items.map(item => `<p class="text-xs text-slate-800 font-medium pl-2 border-l border-slate-200 my-1">⏱️ ${item}</p>`).join('')}
@@ -788,19 +788,19 @@ function renderVisualCanvas(style) {
     `;
   } else if (style === "editorial") {
     html = `
-      <div class="template-editorial p-8 space-y-6 bg-[#fdfbf7] border-t-8 border-slate-900">
-        <div class="text-center border-b-2 border-slate-900 pb-4">
-          <p class="text-xs tracking-widest uppercase font-bold text-slate-600">Edição Especial de Síntese</p>
-          <h1 class="text-3xl font-bold text-slate-900 mt-2">${currentTitle}</h1>
+      <div class="template-editorial p-4 sm:p-8 space-y-4 sm:space-y-6 bg-[#fdfbf7] border-t-8 border-slate-900">
+        <div class="text-center border-b-2 border-slate-900 pb-3 sm:pb-4">
+          <p class="text-[10px] sm:text-xs tracking-widest uppercase font-bold text-slate-600">Edição Especial de Síntese</p>
+          <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-1.5 sm:mt-2">${currentTitle}</h1>
           <p class="text-xs italic text-slate-500 mt-1">Publicado em ${nowStr} • Inteligência Artificial</p>
         </div>
-        <div class="space-y-5">
+        <div class="space-y-4 sm:space-y-5">
           ${sections.map((sec, idx) => `
-            <div class="border-b border-slate-200 pb-4">
-              <h2 class="text-lg font-bold text-slate-900 italic mb-2">${sec.title}</h2>
-              ${sec.text ? `<p class="text-sm text-slate-800 leading-relaxed ${idx === 0 ? 'dropcap' : ''}">${sec.text}</p>` : ''}
+            <div class="border-b border-slate-200 pb-3 sm:pb-4">
+              <h2 class="text-base sm:text-lg font-bold text-slate-900 italic mb-1.5 sm:mb-2">${sec.title}</h2>
+              ${sec.text ? `<p class="text-xs sm:text-sm text-slate-800 leading-relaxed ${idx === 0 ? 'dropcap' : ''}">${sec.text}</p>` : ''}
               ${sec.items.length > 0 ? `
-                <ul class="mt-2 space-y-1 text-sm text-slate-800">
+                <ul class="mt-2 space-y-1 text-xs sm:text-sm text-slate-800">
                   ${sec.items.map(item => `<li>— ${item}</li>`).join('')}
                 </ul>
               ` : ''}
@@ -811,23 +811,23 @@ function renderVisualCanvas(style) {
     `;
   } else if (style === "terminal") {
     html = `
-      <div class="template-terminal p-6 space-y-4 shadow-2xl">
-        <div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
-          <div class="w-3 h-3 rounded-full bg-red-500"></div>
-          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div class="w-3 h-3 rounded-full bg-green-500"></div>
-          <span class="text-xs text-slate-400 font-mono ml-2">summary@gemini:~$ cat resumo.md</span>
+      <div class="template-terminal p-4 sm:p-6 space-y-3.5 sm:space-y-4 shadow-2xl">
+        <div class="flex items-center space-x-2 border-b border-slate-800 pb-2.5 sm:pb-3">
+          <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500"></div>
+          <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500"></div>
+          <span class="text-[11px] sm:text-xs text-slate-400 font-mono ml-2 truncate">summary@gemini:~$ cat resumo.md</span>
         </div>
-        <div class="space-y-4 font-mono text-xs">
+        <div class="space-y-3.5 sm:space-y-4 font-mono text-xs">
           <div>
             <span class="terminal-green font-bold"># ${currentTitle}</span>
-            <p class="text-slate-400 text-[11px]">Date: ${nowStr}</p>
+            <p class="text-slate-400 text-[10px] sm:text-[11px]">Date: ${nowStr}</p>
           </div>
           ${sections.map(sec => `
             <div>
               <p class="terminal-yellow font-bold">## [${sec.title}]</p>
-              ${sec.text ? `<p class="text-slate-300 leading-relaxed pl-2">${sec.text}</p>` : ''}
-              ${sec.items.map(item => `<p class="text-slate-200 pl-4">> ${item}</p>`).join('')}
+              ${sec.text ? `<p class="text-slate-300 leading-relaxed pl-2 text-[11px] sm:text-xs">${sec.text}</p>` : ''}
+              ${sec.items.map(item => `<p class="text-slate-200 pl-3 sm:pl-4 text-[11px] sm:text-xs">> ${item}</p>`).join('')}
             </div>
           `).join('')}
         </div>
@@ -836,7 +836,7 @@ function renderVisualCanvas(style) {
   } else if (style === "breakdown") {
     const totalItems = sections.reduce((acc, s) => acc + s.items.length, 0);
     html = `
-      <div class="template-breakdown p-6 sm:p-10 space-y-8 rounded-2xl relative overflow-hidden">
+      <div class="template-breakdown p-4 sm:p-10 space-y-5 sm:space-y-8 rounded-2xl relative overflow-hidden">
         <!-- Marcadores técnicos de canto (Crosshairs) -->
         <div class="blueprint-crosshair top-3 left-3">+</div>
         <div class="blueprint-crosshair top-3 right-3">+</div>
@@ -844,34 +844,34 @@ function renderVisualCanvas(style) {
         <div class="blueprint-crosshair bottom-3 right-3">+</div>
 
         <!-- Barra Superior de Telemetria e Diagnóstico -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sky-500/30 pb-3 text-[11px] font-mono text-sky-400">
+        <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-sky-500/30 pb-3 text-[10px] sm:text-[11px] font-mono text-sky-400">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
             <span class="font-bold tracking-wider uppercase text-cyan-300">EXPLODED SCHEMATIC // CONCEPT BREAKDOWN</span>
           </div>
-          <div class="flex items-center gap-4 text-slate-400">
+          <div class="flex items-center gap-2 sm:gap-4 text-slate-400">
             <span>MÓDULOS: <strong class="text-sky-300">0${sections.length}</strong></span>
             <span>•</span>
             <span>PARÂMETROS: <strong class="text-sky-300">${totalItems}</strong></span>
             <span>•</span>
-            <span class="text-emerald-400 font-bold">STATUS: DECONSTRUCTED</span>
+            <span class="text-emerald-400 font-bold">STATUS: READY</span>
           </div>
         </div>
 
         <!-- HUB CENTRAL: NÚCLEO DO CONCEITO (Exploded Core) -->
-        <div class="breakdown-hub p-6 sm:p-8 text-center relative my-4">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/50 text-[10px] font-mono text-sky-300 uppercase tracking-widest mb-3">
+        <div class="breakdown-hub p-4 sm:p-8 text-center relative my-3 sm:my-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/50 text-[10px] font-mono text-sky-300 uppercase tracking-widest mb-2 sm:mb-3">
             <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
             NÚCLEO PRINCIPAL // OBJETO CENTRAL
           </div>
-          <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">${currentTitle}</h1>
+          <h1 class="text-xl sm:text-4xl font-black text-white tracking-tight leading-tight">${currentTitle}</h1>
           <p class="text-xs sm:text-sm text-sky-200/80 font-mono mt-2 max-w-2xl mx-auto">
             DESCONSTRUÇÃO ANALÍTICA • SÍNTESE MULTIMODAL • ${nowStr}
           </p>
         </div>
 
         <!-- CONECTOR CENTRAL SVG (Branching Bus) -->
-        <div class="flex items-center justify-center -my-3">
+        <div class="flex items-center justify-center -my-2 sm:-my-3">
           <div class="flex items-center gap-2 text-sky-400 font-mono text-xs">
             <span>▼</span>
             <span class="tracking-widest uppercase text-[10px]">RAMIFICAÇÃO DE COMPONENTES</span>
@@ -880,9 +880,9 @@ function renderVisualCanvas(style) {
         </div>
 
         <!-- GRELHA DE DESCONSTRUÇÃO ESTRUTURAL (Exploded Parts Cards) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 relative">
           ${sections.map((sec, idx) => `
-            <div class="breakdown-card p-6 rounded-2xl flex flex-col justify-between">
+            <div class="breakdown-card p-4 sm:p-6 rounded-2xl flex flex-col justify-between">
               <div>
                 <!-- Topo do Módulo com Identificador Numérico -->
                 <div class="flex items-center justify-between border-b border-sky-500/20 pb-3 mb-4">
