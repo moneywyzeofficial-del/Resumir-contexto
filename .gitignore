@@ -1,0 +1,45 @@
+# Ambiente e Segredos
+.env
+*.env
+*.key
+
+# Ficheiros temporários e uploads
+uploads/
+test_outputs/
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.docx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE e Sistema Operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

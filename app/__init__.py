@@ -1,0 +1,1 @@
+# Resumir Contexto App
