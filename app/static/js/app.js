@@ -620,39 +620,109 @@ function renderVisualCanvas(style) {
       </div>
     `;
   } else if (style === "breakdown") {
+    const totalItems = sections.reduce((acc, s) => acc + s.items.length, 0);
     html = `
-      <div class="template-breakdown p-8 space-y-6 rounded-2xl">
-        <div class="border-b border-sky-500/30 pb-4">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-400/40 text-[11px] font-mono text-sky-300 font-bold uppercase tracking-wider mb-2">
-            <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
-            SCHEMATIC // CONCEPT BREAKDOWN
+      <div class="template-breakdown p-6 sm:p-10 space-y-8 rounded-2xl relative overflow-hidden">
+        <!-- Marcadores técnicos de canto (Crosshairs) -->
+        <div class="blueprint-crosshair top-3 left-3">+</div>
+        <div class="blueprint-crosshair top-3 right-3">+</div>
+        <div class="blueprint-crosshair bottom-3 left-3">+</div>
+        <div class="blueprint-crosshair bottom-3 right-3">+</div>
+
+        <!-- Barra Superior de Telemetria e Diagnóstico -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-sky-500/30 pb-3 text-[11px] font-mono text-sky-400">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="font-bold tracking-wider uppercase text-cyan-300">EXPLODED SCHEMATIC // CONCEPT BREAKDOWN</span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">${currentTitle}</h1>
-          <p class="text-xs text-sky-200/70 mt-1">Anatomia Estruturada • ${nowStr}</p>
+          <div class="flex items-center gap-4 text-slate-400">
+            <span>MÓDULOS: <strong class="text-sky-300">0${sections.length}</strong></span>
+            <span>•</span>
+            <span>PARÂMETROS: <strong class="text-sky-300">${totalItems}</strong></span>
+            <span>•</span>
+            <span class="text-emerald-400 font-bold">STATUS: DECONSTRUCTED</span>
+          </div>
         </div>
-        <div class="space-y-4">
+
+        <!-- HUB CENTRAL: NÚCLEO DO CONCEITO (Exploded Core) -->
+        <div class="breakdown-hub p-6 sm:p-8 text-center relative my-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/50 text-[10px] font-mono text-sky-300 uppercase tracking-widest mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            NÚCLEO PRINCIPAL // OBJETO CENTRAL
+          </div>
+          <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">${currentTitle}</h1>
+          <p class="text-xs sm:text-sm text-sky-200/80 font-mono mt-2 max-w-2xl mx-auto">
+            DESCONSTRUÇÃO ANALÍTICA • SÍNTESE MULTIMODAL • ${nowStr}
+          </p>
+        </div>
+
+        <!-- CONECTOR CENTRAL SVG (Branching Bus) -->
+        <div class="flex items-center justify-center -my-3">
+          <div class="flex items-center gap-2 text-sky-400 font-mono text-xs">
+            <span>▼</span>
+            <span class="tracking-widest uppercase text-[10px]">RAMIFICAÇÃO DE COMPONENTES</span>
+            <span>▼</span>
+          </div>
+        </div>
+
+        <!-- GRELHA DE DESCONSTRUÇÃO ESTRUTURAL (Exploded Parts Cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
           ${sections.map((sec, idx) => `
-            <div class="breakdown-card p-5 border border-sky-500/30">
-              <div class="flex items-center justify-between border-b border-slate-700/60 pb-2.5 mb-3">
-                <div class="flex items-center gap-3">
-                  <span class="breakdown-badge text-xs px-2.5 py-1 rounded-lg">#0${idx + 1}</span>
-                  <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wide">${sec.title}</h3>
+            <div class="breakdown-card p-6 rounded-2xl flex flex-col justify-between">
+              <div>
+                <!-- Topo do Módulo com Identificador Numérico -->
+                <div class="flex items-center justify-between border-b border-sky-500/20 pb-3 mb-4">
+                  <div class="flex items-center gap-2.5">
+                    <span class="breakdown-pin px-2.5 py-1 rounded-md text-xs">#0${idx + 1}</span>
+                    <h3 class="text-base font-bold text-white font-mono tracking-wide uppercase">${sec.title}</h3>
+                  </div>
+                  <span class="text-[10px] font-mono text-sky-400/80 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/50">PART_${idx + 1}</span>
                 </div>
-                <span class="text-[11px] font-mono text-slate-400">NODE_MODULE</span>
-              </div>
-              ${sec.text ? `<p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-3 pl-2 border-l-2 border-sky-500/40">${sec.text}</p>` : ''}
-              ${sec.items.length > 0 ? `
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                  ${sec.items.map(item => `
-                    <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-xs text-slate-200 flex items-start gap-2">
-                      <span class="text-sky-400 font-mono font-bold">›</span>
-                      <span>${item}</span>
+
+                <!-- Explicação / Tese do Módulo -->
+                ${sec.text ? `
+                  <div class="mb-4 text-xs sm:text-sm text-slate-300 leading-relaxed pl-3 border-l-2 border-cyan-400/70 bg-cyan-950/20 py-1.5 rounded-r">
+                    ${sec.text}
+                  </div>
+                ` : ''}
+
+                <!-- Lista de Sub-Itens e Parâmetros Desconstruídos -->
+                ${sec.items.length > 0 ? `
+                  <div class="space-y-2 mt-4">
+                    <div class="text-[10px] font-mono text-sky-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>⚡</span>
+                      <span>ELEMENTOS-CHAVE:</span>
                     </div>
-                  `).join('')}
-                </div>
-              ` : ''}
+                    <div class="space-y-1.5">
+                      ${sec.items.map((item, itemIdx) => `
+                        <div class="breakdown-item-pill p-2.5 flex items-start gap-2.5 text-xs text-slate-200">
+                          <span class="text-cyan-400 font-mono font-bold mt-0.5">›</span>
+                          <span class="leading-relaxed">${item}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Rodapé da Carta com Tag de Circuito -->
+              <div class="mt-4 pt-3 border-t border-sky-500/10 flex items-center justify-between text-[10px] font-mono text-sky-400/60">
+                <span>CONNECT: BUS_NODE_${idx + 1}</span>
+                <span>OK [100%]</span>
+              </div>
             </div>
           `).join('')}
+        </div>
+
+        <!-- PAINEL INFERIOR DE DIAGNÓSTICO & CONCLUSÃO -->
+        <div class="p-4 rounded-xl bg-slate-950/80 border border-sky-500/30 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-sky-300">
+          <div class="flex items-center gap-2">
+            <span class="text-cyan-400 font-bold">█║▌│█│║▌║</span>
+            <span class="text-slate-400">ID: RESUMO-SYS-${Math.floor(1000 + Math.random() * 9000)}</span>
+          </div>
+          <div class="text-slate-400 text-right">
+            <span>DOCUMENTO ESTRUTURADO POR IA • EXPORTAÇÃO HD</span>
+          </div>
         </div>
       </div>
     `;
