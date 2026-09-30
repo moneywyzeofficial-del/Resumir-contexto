@@ -99,6 +99,21 @@ const exportDocxBtn = document.getElementById('exportDocxBtn');
 const exportMarkdownBtn = document.getElementById('exportMarkdownBtn');
 const copyBtn = document.getElementById('copyBtn');
 
+// Elementos do Gerador de Ilustração IA
+const openAiIllustrationBtn = document.getElementById('openAiIllustrationBtn');
+const aiIllustrationModal = document.getElementById('aiIllustrationModal');
+const closeAiIllustrationBtn = document.getElementById('closeAiIllustrationBtn');
+const aiIlluStyle = document.getElementById('aiIlluStyle');
+const aiIlluPrompt = document.getElementById('aiIlluPrompt');
+const aiIlluLoading = document.getElementById('aiIlluLoading');
+const aiIlluImg = document.getElementById('aiIlluImg');
+const aiIlluEmpty = document.getElementById('aiIlluEmpty');
+const generateAiIllustrationBtn = document.getElementById('generateAiIllustrationBtn');
+const insertBannerBtn = document.getElementById('insertBannerBtn');
+const downloadAiIllustrationBtn = document.getElementById('downloadAiIllustrationBtn');
+let currentIllustrationRatio = "landscape";
+let currentGeneratedImageUrl = "";
+
 const apiKeyStatusBadge = document.getElementById('apiKeyStatusBadge');
 const settingsModal = document.getElementById('settingsModal');
 const openSettingsBtn = document.getElementById('openSettingsBtn');
@@ -832,3 +847,155 @@ copyBtn.addEventListener('click', async () => {
     showToast("Erro ao copiar texto.", true);
   }
 });
+
+// =========================================================
+// GERADOR DE ILUSTRAÇÃO IA (POLLINATIONS / FLUX)
+// =========================================================
+openAiIllustrationBtn.addEventListener('click', () => {
+  if (currentViewTab === "edit" && easyMDEInstance) {
+    currentMarkdown = easyMDEInstance.value();
+    updateTitleFromMarkdown();
+  }
+  if (!currentMarkdown) {
+    showToast("Gera ou carrega um resumo primeiro.", true);
+    return;
+  }
+  aiIllustrationModal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+});
+
+const closeAiIllustration = () => aiIllustrationModal.classList.add('hidden');
+closeAiIllustrationBtn.addEventListener('click', closeAiIllustration);
+
+// Seleção de Proporção
+document.querySelectorAll('.ai-ratio-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.ai-ratio-btn').forEach(b => {
+      b.className = "ai-ratio-btn px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1";
+    });
+    const target = e.currentTarget;
+    target.className = "ai-ratio-btn px-2.5 py-2 rounded-xl text-xs font-semibold bg-teal-600 text-white border border-teal-600 flex items-center justify-center gap-1";
+    currentIllustrationRatio = target.getAttribute('data-ratio');
+  });
+});
+
+// Gerar Ilustração com IA
+generateAiIllustrationBtn.addEventListener('click', async () => {
+  const contentToUse = currentViewTab === "edit" && easyMDEInstance ? easyMDEInstance.value() : currentMarkdown;
+  if (!contentToUse) {
+    showToast("Nenhum resumo disponível para ilustrar.", true);
+    return;
+  }
+
+  aiIlluLoading.classList.remove('hidden');
+  aiIlluEmpty.classList.add('hidden');
+  aiIlluImg.classList.add('hidden');
+  generateAiIllustrationBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/generate-illustration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: currentTitle,
+        markdown: contentToUse,
+        style: aiIlluStyle.value,
+        aspect_ratio: currentIllustrationRatio,
+        custom_prompt: aiIlluPrompt.value.trim()
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Erro ao comunicar com o gerador de imagem.");
+    }
+
+    const data = await res.json();
+    currentGeneratedImageUrl = data.image_url;
+    aiIlluPrompt.value = data.prompt;
+
+    // Pré-carregar a imagem para renderizar suavemente
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      aiIlluImg.src = data.image_url;
+      aiIlluImg.classList.remove('hidden');
+      aiIlluLoading.classList.add('hidden');
+      insertBannerBtn.classList.remove('hidden');
+      downloadAiIllustrationBtn.classList.remove('hidden');
+      generateAiIllustrationBtn.disabled = false;
+      showToast("Ilustração gerada com sucesso!");
+    };
+    tempImg.onerror = () => {
+      aiIlluImg.src = data.image_url;
+      aiIlluImg.classList.remove('hidden');
+      aiIlluLoading.classList.add('hidden');
+      insertBannerBtn.classList.remove('hidden');
+      downloadAiIllustrationBtn.classList.remove('hidden');
+      generateAiIllustrationBtn.disabled = false;
+    };
+    tempImg.src = data.image_url;
+
+  } catch (err) {
+    console.error(err);
+    aiIlluLoading.classList.add('hidden');
+    aiIlluEmpty.classList.remove('hidden');
+    generateAiIllustrationBtn.disabled = false;
+    showToast("Erro ao gerar imagem: " + err.message, true);
+  }
+});
+
+// Inserir Banner no Topo do Resumo
+insertBannerBtn.addEventListener('click', () => {
+  if (!currentGeneratedImageUrl) return;
+
+  const bannerMarkdown = `![Ilustração IA](${currentGeneratedImageUrl})\n\n`;
+  
+  // Se já tiver uma imagem de banner no início, substituir; senão, prepend
+  if (currentMarkdown.startsWith('![Ilustração IA](')) {
+    currentMarkdown = currentMarkdown.replace(/^!\[Ilustração IA\]\([^\)]+\)\n\n/, bannerMarkdown);
+  } else {
+    currentMarkdown = bannerMarkdown + currentMarkdown;
+  }
+
+  if (easyMDEInstance) {
+    easyMDEInstance.value(currentMarkdown);
+  }
+  summaryPreview.innerHTML = marked.parse(currentMarkdown);
+  closeAiIllustration();
+  showToast("Ilustração inserida como cabeçalho no resumo!");
+});
+
+// Descarregar Imagem HD
+downloadAiIllustrationBtn.addEventListener('click', async () => {
+  if (!currentGeneratedImageUrl) return;
+  showToast("A descarregar imagem HD...");
+
+  try {
+    const res = await fetch('/api/download-illustration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: currentGeneratedImageUrl,
+        title: currentTitle
+      })
+    });
+
+    if (!res.ok) throw new Error("Erro ao descarregar a imagem.");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `${currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}_ilustracao.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    showToast("Imagem descarregada com sucesso!");
+  } catch (err) {
+    console.error(err);
+    // Fallback: abrir imagem diretamente numa nova aba
+    window.open(currentGeneratedImageUrl, '_blank');
+  }
+});
+

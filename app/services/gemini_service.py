@@ -242,3 +242,43 @@ A tua resposta DEVE seguir rigorosamente a seguinte estrutura em Markdown:
             "file_type": "url",
             "source_url": source_url
         }
+
+    def generate_image_prompt(self, title: str, summary_excerpt: str, style: str = "breakdown") -> str:
+        """Usa o Gemini para gerar o melhor prompt visual em inglês para o motor de imagem."""
+        if not self.client:
+            from app.services.image_service import ImageService
+            return ImageService.get_prompt_for_style(style, title)
+
+        style_descriptions = {
+            "breakdown": "3D exploded view schematic breakdown, isometric deconstructed components, floating parts with technical diagram callouts, octane 3D render, dark minimalist background, 8k",
+            "isometric": "3D isometric miniature diorama, smooth clean materials, vibrant lighting, Blender 3D render, modern tech aesthetic, 8k",
+            "concept": "Cinematic digital concept art, volumetric lighting, rich detail, artstation trending, 8k wallpaper",
+            "editorial": "Modern flat vector editorial illustration, elegant harmonious color palette, clean outlines, Behance graphic design style",
+            "photorealistic": "Professional editorial studio photograph, commercial quality, 85mm lens, sharp focus, 8k resolution",
+            "watercolor": "Artistic watercolor and ink illustration, delicate washes on textured paper, detailed line art"
+        }
+        chosen_style = style_descriptions.get(style, style_descriptions["breakdown"])
+
+        meta_prompt = f"""
+Based on this title and summary excerpt, write a single concise and highly descriptive English text-to-image prompt (30-45 words).
+The prompt MUST capture the core subject in the following visual style:
+Style: {chosen_style}
+
+Title: {title}
+Context: {summary_excerpt[:600]}
+
+Rules:
+- Output ONLY the prompt string in English.
+- Do NOT include quotes, explanations or markdown.
+"""
+        try:
+            resp = self._generate_with_fallback(contents=[meta_prompt])
+            prompt_text = resp.text.strip().replace('"', '').replace('\n', ' ')
+            if len(prompt_text) > 10:
+                return prompt_text
+        except Exception:
+            pass
+
+        from app.services.image_service import ImageService
+        return ImageService.get_prompt_for_style(style, title)
+

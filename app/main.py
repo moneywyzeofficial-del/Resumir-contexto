@@ -11,6 +11,7 @@ from app.config import GEMINI_API_KEY, UPLOAD_DIR
 from app.services.gemini_service import GeminiService
 from app.services.export_service import ExportService
 from app.services.web_service import WebService
+from app.services.image_service import ImageService
 
 app = FastAPI(title="Resumo de Conteúdo com IA", description="Resumo inteligente de vídeos, imagens, YouTube, Facebook e websites com exportação")
 
@@ -33,6 +34,18 @@ class UrlSummarizeRequest(BaseModel):
     language: str = "pt-PT"
     custom_instructions: str = ""
     api_key: str = ""
+
+class GenerateIllustrationRequest(BaseModel):
+    title: str
+    markdown: str
+    style: str = "breakdown"
+    aspect_ratio: str = "landscape"
+    custom_prompt: str = ""
+
+class DownloadIllustrationRequest(BaseModel):
+    image_url: str
+    title: str = "ilustracao"
+
 
 @app.get("/")
 async def root():
@@ -215,3 +228,52 @@ async def export_markdown_endpoint(req: ExportRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao gerar Markdown: {str(e)}")
+
+@app.post("/api/generate-illustration")
+async def generate_illustration_endpoint(req: GenerateIllustrationRequest):
+    try:
+        width, height = 1280, 720
+        if req.aspect_ratio == "square":
+            width, height = 1024, 1024
+        elif req.aspect_ratio == "portrait":
+            width, height = 720, 1280
+
+        prompt = req.custom_prompt.strip() if req.custom_prompt and req.custom_prompt.strip() else ""
+        if not prompt:
+            prompt = gemini_service.generate_image_prompt(
+                title=req.title,
+                summary_excerpt=req.markdown,
+                style=req.style
+            )
+
+        image_url = ImageService.build_pollinations_url(
+            prompt=prompt,
+            width=width,
+            height=height,
+            model="flux"
+        )
+
+        return {
+            "success": True,
+            "prompt": prompt,
+            "image_url": image_url,
+            "style": req.style,
+            "width": width,
+            "height": height
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar ilustração com IA: {str(e)}")
+
+@app.post("/api/download-illustration")
+async def download_illustration_endpoint(req: DownloadIllustrationRequest):
+    try:
+        img_bytes = await ImageService.fetch_image_bytes(req.image_url)
+        clean_filename = "".join(c for c in req.title if c.isalnum() or c in (" ", "_", "-")).rstrip() or "ilustracao-ia"
+        return Response(
+            content=img_bytes,
+            media_type="image/jpeg",
+            headers={"Content-Disposition": f'attachment; filename="{clean_filename}.jpg"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao descarregar ilustração: {str(e)}")
+
