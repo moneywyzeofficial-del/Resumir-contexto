@@ -879,7 +879,7 @@ document.querySelectorAll('.ai-ratio-btn').forEach(btn => {
   });
 });
 
-// Gerar Ilustração com IA
+// Gerar Ilustração com IA (Puter.js FLUX / Zero Paywalls)
 generateAiIllustrationBtn.addEventListener('click', async () => {
   const contentToUse = currentViewTab === "edit" && easyMDEInstance ? easyMDEInstance.value() : currentMarkdown;
   if (!contentToUse) {
@@ -893,6 +893,7 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
   generateAiIllustrationBtn.disabled = true;
 
   try {
+    // 1. Obter prompt visual otimizado em inglês pelo Gemini
     const res = await fetch('/api/generate-illustration', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -907,17 +908,36 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || "Erro ao comunicar com o gerador de imagem.");
+      throw new Error(err.detail || "Erro ao comunicar com o servidor.");
     }
 
     const data = await res.json();
-    currentGeneratedImageUrl = data.image_url;
     aiIlluPrompt.value = data.prompt;
+    const promptToRender = data.prompt;
 
-    // Pré-carregar a imagem para renderizar suavemente
+    // 2. Gerar com Puter.js (100% Gratuito no browser, sem x402 / sem paywalls)
+    if (window.puter && window.puter.ai && typeof window.puter.ai.txt2img === 'function') {
+      try {
+        const generatedImgElement = await puter.ai.txt2img(promptToRender);
+        currentGeneratedImageUrl = generatedImgElement.src;
+        aiIlluImg.src = currentGeneratedImageUrl;
+        aiIlluImg.classList.remove('hidden');
+        aiIlluLoading.classList.add('hidden');
+        insertBannerBtn.classList.remove('hidden');
+        downloadAiIllustrationBtn.classList.remove('hidden');
+        generateAiIllustrationBtn.disabled = false;
+        showToast("Ilustração gerada com sucesso!");
+        return;
+      } catch (puterErr) {
+        console.warn("Puter.js falhou, a tentar fallback direto:", puterErr);
+      }
+    }
+
+    // 3. Fallback Direto
+    currentGeneratedImageUrl = data.image_url;
     const tempImg = new Image();
     tempImg.onload = () => {
-      aiIlluImg.src = data.image_url;
+      aiIlluImg.src = currentGeneratedImageUrl;
       aiIlluImg.classList.remove('hidden');
       aiIlluLoading.classList.add('hidden');
       insertBannerBtn.classList.remove('hidden');
@@ -926,14 +946,12 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
       showToast("Ilustração gerada com sucesso!");
     };
     tempImg.onerror = () => {
-      aiIlluImg.src = data.image_url;
-      aiIlluImg.classList.remove('hidden');
       aiIlluLoading.classList.add('hidden');
-      insertBannerBtn.classList.remove('hidden');
-      downloadAiIllustrationBtn.classList.remove('hidden');
+      aiIlluEmpty.classList.remove('hidden');
       generateAiIllustrationBtn.disabled = false;
+      showToast("O fornecedor público externo aplicou restrições. Podes copiar o prompt e gerar no Copilot/ImageFX!", true);
     };
-    tempImg.src = data.image_url;
+    tempImg.src = currentGeneratedImageUrl;
 
   } catch (err) {
     console.error(err);
