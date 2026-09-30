@@ -214,33 +214,79 @@ pasteUrlBtn.addEventListener('click', async () => {
   }
 });
 
+// Elementos adicionais das Definições
+const headerSettingsStatusDot = document.getElementById('headerSettingsStatusDot');
+const settingsApiStatusBadge = document.getElementById('settingsApiStatusBadge');
+const toggleApiKeyVisibilityBtn = document.getElementById('toggleApiKeyVisibilityBtn');
+const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
+const clearAllStorageBtn = document.getElementById('clearAllStorageBtn');
+const settingsProjectsCountText = document.getElementById('settingsProjectsCountText');
+
 // Verificar estado da API
 async function checkApiStatus() {
   try {
     const res = await fetch('/api/status');
     const data = await res.json();
-    if (data.configured) {
-      apiKeyStatusBadge.className = "hidden sm:flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
-      apiKeyStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span><span>Gemini API Pronta</span>`;
-    } else {
-      apiKeyStatusBadge.className = "hidden sm:flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer";
-      apiKeyStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 mr-2 animate-pulse"></span><span>Configurar Chave API</span>`;
-      apiKeyStatusBadge.onclick = () => settingsModal.classList.remove('hidden');
+    const isConfigured = data.configured || !!localStorage.getItem("gemini_api_key");
+
+    if (headerSettingsStatusDot) {
+      headerSettingsStatusDot.className = `w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-500 shadow-sm' : 'bg-amber-500 animate-pulse'}`;
+    }
+
+    if (settingsApiStatusBadge) {
+      if (isConfigured) {
+        settingsApiStatusBadge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800";
+        settingsApiStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>Conectado & Pronto`;
+      } else {
+        settingsApiStatusBadge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800";
+        settingsApiStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>Sem Chave Configurada`;
+      }
     }
   } catch (err) {
     console.error(err);
   }
 }
 
-// Modal de Chave API
+// Abrir e Fechar Modal de Definições
 openSettingsBtn.addEventListener('click', () => {
+  const savedKey = localStorage.getItem("gemini_api_key") || "";
+  if (savedKey) apiKeyInput.value = savedKey;
+  
+  const projects = getSavedProjects();
+  if (settingsProjectsCountText) {
+    settingsProjectsCountText.textContent = `${projects.length} projeto(s) guardado(s)`;
+  }
+  
+  checkApiStatus();
   settingsModal.classList.remove('hidden');
-  apiKeyInput.focus();
+  if (window.lucide) lucide.createIcons();
 });
-const closeModal = () => settingsModal.classList.add('hidden');
-closeSettingsBtn.addEventListener('click', closeModal);
-cancelSettingsBtn.addEventListener('click', closeModal);
 
+const closeSettingsModal = () => settingsModal.classList.add('hidden');
+closeSettingsBtn.addEventListener('click', closeSettingsModal);
+cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+
+// Alternar Visibilidade da Chave API
+if (toggleApiKeyVisibilityBtn) {
+  toggleApiKeyVisibilityBtn.addEventListener('click', () => {
+    const isPassword = apiKeyInput.type === 'password';
+    apiKeyInput.type = isPassword ? 'text' : 'password';
+    toggleApiKeyVisibilityBtn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+    if (window.lucide) lucide.createIcons();
+  });
+}
+
+// Limpar Chave API
+if (clearApiKeyBtn) {
+  clearApiKeyBtn.addEventListener('click', () => {
+    apiKeyInput.value = '';
+    localStorage.removeItem("gemini_api_key");
+    checkApiStatus();
+    showToast("Chave API limpa do navegador.");
+  });
+}
+
+// Guardar Chave API
 saveApiKeyBtn.addEventListener('click', async () => {
   const key = apiKeyInput.value.trim();
   if (!key) {
@@ -255,10 +301,10 @@ saveApiKeyBtn.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast("Chave API guardada com sucesso!");
-      closeModal();
-      checkApiStatus();
       localStorage.setItem("gemini_api_key", key);
+      checkApiStatus();
+      closeSettingsModal();
+      showToast("Definições e chave guardadas com sucesso!");
     } else {
       showToast(data.detail || "Erro ao guardar chave.", true);
     }
@@ -266,6 +312,20 @@ saveApiKeyBtn.addEventListener('click', async () => {
     showToast("Erro na ligação com o servidor.", true);
   }
 });
+
+// Limpar Todo o Armazenamento Local
+if (clearAllStorageBtn) {
+  clearAllStorageBtn.addEventListener('click', () => {
+    if (!confirm("Tens a certeza de que queres limpar todos os rascunhos e projetos guardados localmente?")) return;
+    localStorage.removeItem('resumos_projects');
+    localStorage.removeItem('resumos_active_draft');
+    updateProjectsBadge();
+    if (settingsProjectsCountText) settingsProjectsCountText.textContent = '0 projetos guardados';
+    renderProjectsList();
+    showToast("Armazenamento local limpo com sucesso!");
+  });
+}
+
 
 // Drag and Drop
 ['dragenter', 'dragover'].forEach(eventName => {
