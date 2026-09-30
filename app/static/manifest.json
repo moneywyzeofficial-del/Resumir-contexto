@@ -1,0 +1,27 @@
+{
+  "name": "Resumo de Conteúdo com IA",
+  "short_name": "Resumir IA",
+  "description": "Resumo inteligente de vídeos, imagens, YouTube, Facebook e websites.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/static/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ]
+}
