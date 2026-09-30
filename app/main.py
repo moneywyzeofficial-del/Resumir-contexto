@@ -178,6 +178,54 @@ async def summarize_media(
             except Exception:
                 pass
 
+@app.post("/api/extract-links")
+async def extract_links_endpoint(
+    file: UploadFile = File(...),
+    language: str = Form("pt-PT"),
+    api_key: str = Form("")
+):
+    if api_key:
+        gemini_service.set_api_key(api_key)
+
+    if not gemini_service.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Chave API do Gemini em falta. Por favor, insere a tua chave nas definições da aplicação ou no ficheiro .env."
+        )
+
+    filename = file.filename or "upload"
+    ext = Path(filename).suffix.lower()
+    allowed_exts = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".mp4", ".mov", ".avi", ".webm", ".mkv"}
+    
+    if ext not in allowed_exts:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato não suportado '{ext}'. Por favor envia uma imagem ou vídeo."
+        )
+
+    temp_filename = f"links_{uuid.uuid4().hex}{ext}"
+    temp_path = UPLOAD_DIR / temp_filename
+
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        result = gemini_service.extract_links_from_media(
+            file_path=temp_path,
+            language=language
+        )
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except Exception:
+                pass
+
 @app.post("/api/export/pdf")
 async def export_pdf_endpoint(req: ExportRequest):
     try:

@@ -8,6 +8,34 @@ let activeVisualTemplate = "infographic";
 let easyMDEInstance = null;
 let currentProjectId = null;
 
+// Configurar Marked.js para converter e renderizar links clicáveis em nova aba
+if (window.marked) {
+  const customRenderer = new marked.Renderer();
+  const originalLink = customRenderer.link ? customRenderer.link.bind(customRenderer) : null;
+
+  customRenderer.link = function(href, title, text) {
+    let cleanHref = href;
+    let linkTitle = title;
+    let linkText = text;
+
+    // Tratar objeto ou string em versões recentes do Marked
+    if (typeof href === 'object' && href !== null) {
+      cleanHref = href.href || '';
+      linkTitle = href.title || '';
+      linkText = href.text || '';
+    }
+
+    if (!cleanHref.startsWith('http://') && !cleanHref.startsWith('https://') && !cleanHref.startsWith('mailto:') && !cleanHref.startsWith('#')) {
+      cleanHref = 'https://' + cleanHref;
+    }
+
+    const titleAttr = linkTitle ? ` title="${linkTitle}"` : '';
+    return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="text-teal-700 hover:text-teal-900 underline font-semibold break-all inline-flex items-center gap-0.5" ${titleAttr}><span>${linkText}</span><svg class="w-3 h-3 inline-block shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a>`;
+  };
+
+  marked.setOptions({ renderer: customRenderer, breaks: true, gfm: true });
+}
+
 // Inicialização da Página
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
@@ -95,6 +123,7 @@ const summaryFocus = document.getElementById('summaryFocus');
 const summaryLanguage = document.getElementById('summaryLanguage');
 const customInstructions = document.getElementById('customInstructions');
 const generateBtn = document.getElementById('generateBtn');
+const extractLinksFromImageBtn = document.getElementById('extractLinksFromImageBtn');
 
 const emptyState = document.getElementById('emptyState');
 const loadingState = document.getElementById('loadingState');
@@ -596,6 +625,77 @@ generateBtn.addEventListener('click', async () => {
     generateBtn.disabled = false;
   }
 });
+
+// Ação de Extração Rápida de Links da Imagem
+if (extractLinksFromImageBtn) {
+  extractLinksFromImageBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!currentFile) {
+      showToast("Por favor carrega uma imagem ou vídeo primeiro.", true);
+      return;
+    }
+
+    const savedLocalKey = localStorage.getItem("gemini_api_key") || "";
+    extractLinksFromImageBtn.disabled = true;
+    generateBtn.disabled = true;
+    emptyState.classList.add('hidden');
+    summaryPreview.classList.add('hidden');
+    editorWrapper.classList.add('hidden');
+    exportToolbar.classList.add('hidden');
+    viewTabs.classList.add('hidden');
+    loadingState.classList.remove('hidden');
+
+    resetAiIllustrationState();
+    startSummaryProgress("file");
+    setSummaryProgress(20, "OCR DE LINKS", "A examinar imagem e texto...", "A detetar URLs, websites e códigos QR visíveis...");
+
+    try {
+      const formData = new FormData();
+      formData.append('file', currentFile);
+      formData.append('language', summaryLanguage.value);
+      if (savedLocalKey) formData.append('api_key', savedLocalKey);
+
+      const res = await fetch('/api/extract-links', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Erro ao extrair links da imagem.");
+
+      completeSummaryProgress();
+      await new Promise(r => setTimeout(r, 400));
+
+      currentMarkdown = data.markdown;
+      currentTitle = data.title || "Links Detetados na Imagem";
+      currentProjectId = null;
+
+      summaryPreview.innerHTML = marked.parse(currentMarkdown);
+      if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
+
+      triggerAutoSave();
+
+      loadingState.classList.add('hidden');
+      summaryPreview.classList.remove('hidden');
+      exportToolbar.classList.remove('hidden');
+      viewTabs.classList.remove('hidden');
+
+      const count = data.total_links || 0;
+      showToast(count > 0 ? `${count} link(s) detetado(s) e convertido(s)!` : "Análise de links concluída!");
+      if (window.lucide) lucide.createIcons();
+
+    } catch (err) {
+      console.error(err);
+      stopSummaryProgress();
+      loadingState.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      showToast(err.message, true);
+    } finally {
+      extractLinksFromImageBtn.disabled = false;
+      generateBtn.disabled = false;
+    }
+  });
+}
 
 
 // =========================================================
