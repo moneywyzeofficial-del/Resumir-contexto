@@ -23,6 +23,7 @@ class WebService:
 
     @staticmethod
     def extract_youtube_video_id(url: str) -> Optional[str]:
+        # Suporta múltiplos formatos incluindo URLs com timestamps e parâmetros extras (&t=606s&pp=...)
         patterns = [
             r"(?:v=|\/embed\/|\/v\/|youtu\.be\/|\/shorts\/|\/watch\?v=)([\w-]{11})",
             r"^([\w-]{11})$"
@@ -35,15 +36,16 @@ class WebService:
 
     @classmethod
     async def fetch_youtube_content(cls, url: str) -> Dict[str, Any]:
-        """Obtém metadados e a transcrição/legendas de um vídeo do YouTube."""
+        """Obtém metadados e a transcrição/legendas de um vídeo do YouTube em qualquer idioma (PT, EN, etc.)."""
         video_id = cls.extract_youtube_video_id(url)
         if not video_id:
-            raise ValueError("Não foi possível identificar o ID do vídeo do YouTube.")
+            raise ValueError("Não foi possível identificar o ID do vídeo do YouTube. Verifica o link introduzido.")
 
         video_title = "Vídeo do YouTube"
         author_name = "Canal YouTube"
         thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
 
+        # 1. Obter título e canal via oEmbed API do YouTube
         try:
             oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -56,40 +58,63 @@ class WebService:
         except Exception:
             pass
 
+        # 2. Obter a transcrição em qualquer idioma disponível
         transcript_text = ""
+        transcript_success = False
         try:
             ytt = YouTubeTranscriptApi()
-            fetched_transcript = ytt.fetch(video_id)
+            transcript_list = ytt.list(video_id)
             
-            formatted_lines = []
-            snippets = getattr(fetched_transcript, 'snippets', None)
-            
-            if snippets:
-                for snippet in snippets:
-                    start_sec = int(snippet.start)
-                    minutes = start_sec // 60
-                    seconds = start_sec % 60
-                    time_str = f"{minutes:02d}:{seconds:02d}"
-                    text = snippet.text.strip()
-                    if text and text not in ["[Música]", "[Aplausos]", "[Risos]"]:
-                        formatted_lines.append(f"[{time_str}] {text}")
-            elif hasattr(fetched_transcript, 'to_raw_data'):
-                for item in fetched_transcript.to_raw_data():
-                    start_sec = int(item.get('start', 0))
-                    minutes = start_sec // 60
-                    seconds = start_sec % 60
-                    time_str = f"{minutes:02d}:{seconds:02d}"
-                    text = item.get('text', '').strip()
-                    if text:
-                        formatted_lines.append(f"[{time_str}] {text}")
+            # Prioridade de idiomas: Português, Inglês, Espanhol, ou o primeiro disponível
+            transcript_obj = None
+            try:
+                transcript_obj = transcript_list.find_transcript(['pt', 'pt-PT', 'pt-BR', 'en', 'es', 'fr', 'de', 'it'])
+            except Exception:
+                # Se não encontrar nos prioritários, apanhar a primeira transcrição disponível
+                for t in transcript_list:
+                    transcript_obj = t
+                    break
 
-            transcript_text = "\n".join(formatted_lines).strip()
+            if transcript_obj:
+                fetched = transcript_obj.fetch()
+                formatted_lines = []
+                snippets = getattr(fetched, 'snippets', None)
+                
+                if snippets:
+                    for snippet in snippets:
+                        start_sec = int(snippet.start)
+                        minutes = start_sec // 60
+                        seconds = start_sec % 60
+                        time_str = f"{minutes:02d}:{seconds:02d}"
+                        text = snippet.text.strip()
+                        if text and text not in ["[Música]", "[Aplausos]", "[Risos]"]:
+                            formatted_lines.append(f"[{time_str}] {text}")
+                elif hasattr(fetched, 'to_raw_data'):
+                    for item in fetched.to_raw_data():
+                        start_sec = int(item.get('start', 0))
+                        minutes = start_sec // 60
+                        seconds = start_sec % 60
+                        time_str = f"{minutes:02d}:{seconds:02d}"
+                        text = item.get('text', '').strip()
+                        if text:
+                            formatted_lines.append(f"[{time_str}] {text}")
+
+                transcript_text = "\n".join(formatted_lines).strip()
+                if transcript_text:
+                    transcript_success = True
 
         except Exception as e:
-            transcript_text = (
-                f"[Aviso: Não foi possível obter legendas para este vídeo ({str(e)}). "
-                f"O vídeo intitula-se '{video_title}' do canal '{author_name}']"
-            )
+            transcript_text = ""
+
+        # Se não houver transcrição/legendas no YouTube, fazer fallback para descarregar o áudio/vídeo com yt-dlp
+        if not transcript_success or not transcript_text:
+            try:
+                return cls.download_social_video(f"https://www.youtube.com/watch?v={video_id}")
+            except Exception:
+                transcript_text = (
+                    f"Vídeo intitula-se '{video_title}' do canal '{author_name}'. "
+                    f"O criador não disponibilizou legendas neste vídeo."
+                )
 
         full_content = f"Canal: {author_name}\nVídeo: {video_title}\nLink: https://www.youtube.com/watch?v={video_id}\n\nTranscrição e Discurso do Vídeo:\n{transcript_text}"
 
@@ -105,7 +130,7 @@ class WebService:
 
     @classmethod
     def download_social_video(cls, url: str) -> Dict[str, Any]:
-        """Descarrega vídeo público do Facebook/Instagram/TikTok com yt-dlp."""
+        """Descarrega vídeo público do Facebook/Instagram/TikTok/YouTube com yt-dlp."""
         temp_id = uuid.uuid4().hex[:8]
         out_template = str(UPLOAD_DIR / f"social_{temp_id}.%(ext)s")
 
@@ -115,15 +140,14 @@ class WebService:
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
-            'max_filesize': 80 * 1024 * 1024, # Máximo 80MB para rapidez
+            'max_filesize': 80 * 1024 * 1024,
         }
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                title = info.get('title', 'Vídeo do Facebook / Rede Social')
+                title = info.get('title', 'Vídeo')
                 
-                # Encontrar o ficheiro descarregado
                 downloaded_files = list(UPLOAD_DIR.glob(f"social_{temp_id}.*"))
                 if not downloaded_files:
                     raise ValueError("Ficheiro de vídeo não foi guardado.")
@@ -140,10 +164,10 @@ class WebService:
             err_msg = str(e)
             if "login" in err_msg.lower() or "private" in err_msg.lower() or "permission" in err_msg.lower():
                 raise ValueError(
-                    "Este vídeo do Facebook é privado ou requer início de sessão. "
+                    "Este vídeo é privado ou requer início de sessão. "
                     "Para o resumir, podes descarregar o ficheiro e carregá-lo no separador 'Ficheiro Local'."
                 )
-            raise ValueError(f"Não foi possível descarregar o vídeo ({err_msg}).")
+            raise ValueError(f"Não foi possível processar o vídeo ({err_msg}).")
         except Exception as e:
             raise ValueError(f"Erro ao processar vídeo: {str(e)}")
 

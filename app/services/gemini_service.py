@@ -1,9 +1,18 @@
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from google import genai
 from google.genai import types
 from app.config import GEMINI_API_KEY, DEFAULT_MODEL
+
+FALLBACK_MODELS = [
+    DEFAULT_MODEL,
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-flash-latest"
+]
 
 class GeminiService:
     def __init__(self, api_key: Optional[str] = None):
@@ -47,6 +56,27 @@ class GeminiService:
             "actions": "Foca o resumo nas conclusões, decisões tomadas, tarefas a realizar e passos práticos indicados no conteúdo."
         }
         return style_prompts.get(style, style_prompts["balanced"])
+
+    def _generate_with_fallback(self, contents: List[Any]) -> types.GenerateContentResponse:
+        """Tenta gerar conteúdo usando uma lista de modelos com fallback automático."""
+        last_err = None
+        used_models = []
+        for model in FALLBACK_MODELS:
+            if model in used_models:
+                continue
+            used_models.append(model)
+            try:
+                response = self.client.models.generate_content(
+                    model=model,
+                    contents=contents
+                )
+                return response
+            except Exception as e:
+                last_err = e
+                continue
+        if last_err:
+            raise last_err
+        raise RuntimeError("Não foi possível gerar conteúdo com os modelos Gemini disponíveis.")
 
     def summarize_media(
         self,
@@ -112,10 +142,7 @@ A tua resposta DEVE seguir rigorosamente a seguinte estrutura em Markdown:
                 if uploaded_file.state.name == "FAILED":
                     raise RuntimeError("O processamento do vídeo falhou na API da Google.")
 
-                response = self.client.models.generate_content(
-                    model=DEFAULT_MODEL,
-                    contents=[uploaded_file, prompt]
-                )
+                response = self._generate_with_fallback(contents=[uploaded_file, prompt])
             else:
                 with open(file_path, "rb") as f:
                     image_bytes = f.read()
@@ -124,10 +151,7 @@ A tua resposta DEVE seguir rigorosamente a seguinte estrutura em Markdown:
                     data=image_bytes,
                     mime_type=mime_type
                 )
-                response = self.client.models.generate_content(
-                    model=DEFAULT_MODEL,
-                    contents=[part, prompt]
-                )
+                response = self._generate_with_fallback(contents=[part, prompt])
 
             summary_text = response.text.strip() if response.text else "Não foi possível gerar um resumo."
             
@@ -167,11 +191,12 @@ A tua resposta DEVE seguir rigorosamente a seguinte estrutura em Markdown:
         style_instruction = self._get_style_instruction(style)
 
         prompt = f"""
-És um assistente perito em sintetizar artigos, notícias, documentações e páginas web.
-Analisa o seguinte conteúdo textual extraído do website: {source_url or 'Página Web'}
-Título Original: {title}
+És um assistente perito em sintetizar vídeos do YouTube, artigos, notícias e páginas web.
+Analisa o seguinte conteúdo:
+Título: {title}
+Fonte: {source_url or 'Web / Vídeo'}
 
-Texto:
+Conteúdo e Discurso:
 {text_content}
 
 Diretrizes:
@@ -181,32 +206,29 @@ Diretrizes:
 
 A tua resposta DEVE seguir rigorosamente a seguinte estrutura em Markdown:
 
-# [Título Conciso e Claro do Artigo/Página]
+# [Título Conciso e Claro do Vídeo ou Artigo]
 
 ## 📌 Resumo Principal
-[Um ou dois parágrafos a resumir o tema central e o objetivo do artigo]
+[Um ou dois parágrafos a resumir o tema central, contexto e mensagem principal]
 
 ## 🎯 Pontos-Chave
-- [Ponto chave 1 com explicação clara]
+- [Ponto chave 1 com explicação clara e timestamps relevantes se aplicável]
 - [Ponto chave 2 com explicação clara]
 - [Ponto chave 3 com explicação clara]
 
-## 📝 Detalhes e Informações Relevantes
-[Secção com o desenvolvimento das ideias principais, argumentos, dados, estatísticas ou citações presentes no texto]
+## 📝 Passo a Passo e Conteúdo Detalhado
+[Secção com o desenvolvimento detalhado dos procedimentos explicados, produtos usados, técnicas ou argumentos apresentados]
 
-## 💡 Conclusões e Considerações Finais
-- [Conclusão/Ideia principal 1]
-- [Conclusão/Ideia principal 2]
+## 💡 Conclusões e Dicas Práticas
+- [Dica prática ou conclusão 1]
+- [Dica prática ou conclusão 2]
 """
 
-        response = self.client.models.generate_content(
-            model=DEFAULT_MODEL,
-            contents=[prompt]
-        )
+        response = self._generate_with_fallback(contents=[prompt])
 
         summary_text = response.text.strip() if response.text else "Não foi possível gerar um resumo."
         
-        extracted_title = title or "Resumo de Artigo Web"
+        extracted_title = title or "Resumo de Conteúdo"
         for line in summary_text.splitlines():
             if line.startswith("# "):
                 extracted_title = line.replace("# ", "").strip()
