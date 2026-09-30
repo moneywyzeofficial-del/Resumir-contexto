@@ -100,6 +100,11 @@ const emptyState = document.getElementById('emptyState');
 const loadingState = document.getElementById('loadingState');
 const loadingTitle = document.getElementById('loadingTitle');
 const loadingDesc = document.getElementById('loadingDesc');
+const summaryProgressCircle = document.getElementById('summaryProgressCircle');
+const summaryProgressPercent = document.getElementById('summaryProgressPercent');
+const summaryProgressBar = document.getElementById('summaryProgressBar');
+const loadingStageTag = document.getElementById('loadingStageTag');
+
 const summaryPreview = document.getElementById('summaryPreview');
 const editorWrapper = document.getElementById('editorWrapper');
 const exportToolbar = document.getElementById('exportToolbar');
@@ -132,8 +137,96 @@ const aiIlluEmpty = document.getElementById('aiIlluEmpty');
 const generateAiIllustrationBtn = document.getElementById('generateAiIllustrationBtn');
 const insertBannerBtn = document.getElementById('insertBannerBtn');
 const downloadAiIllustrationBtn = document.getElementById('downloadAiIllustrationBtn');
+
+const aiIlluProgressCircle = document.getElementById('aiIlluProgressCircle');
+const aiIlluPercent = document.getElementById('aiIlluPercent');
+const aiIlluProgressBar = document.getElementById('aiIlluProgressBar');
+const aiIlluStatusText = document.getElementById('aiIlluStatusText');
+
 let currentIllustrationRatio = "landscape";
 let currentGeneratedImageUrl = "";
+
+let summaryProgressInterval = null;
+let currentSummaryProgress = 0;
+
+function setSummaryProgress(percent, stageTag, title, desc) {
+  currentSummaryProgress = percent;
+  if (summaryProgressCircle) {
+    const offset = 264 - (264 * Math.min(percent, 100) / 100);
+    summaryProgressCircle.style.strokeDashoffset = offset;
+  }
+  if (summaryProgressPercent) summaryProgressPercent.textContent = `${Math.round(percent)}%`;
+  if (summaryProgressBar) summaryProgressBar.style.width = `${Math.min(percent, 100)}%`;
+  if (stageTag && loadingStageTag) loadingStageTag.textContent = stageTag;
+  if (title && loadingTitle) loadingTitle.textContent = title;
+  if (desc && loadingDesc) loadingDesc.textContent = desc;
+}
+
+function startSummaryProgress(mode) {
+  clearInterval(summaryProgressInterval);
+  setSummaryProgress(5, "ETAPA 1/4", mode === 'url' ? "A aceder ao link..." : "A carregar ficheiro...", "A preparar o ambiente de análise...");
+
+  summaryProgressInterval = setInterval(() => {
+    if (currentSummaryProgress < 25) {
+      setSummaryProgress(currentSummaryProgress + 1.5, "ETAPA 1/4", mode === 'url' ? "A extrair transcrição e dados..." : "A processar fotogramas e áudio...", "A recolher o conteúdo integral...");
+    } else if (currentSummaryProgress < 60) {
+      setSummaryProgress(currentSummaryProgress + 1.2, "ETAPA 2/4", "A analisar contexto com Gemini IA...", "A examinar discurso, tópicos e texto visual (OCR)...");
+    } else if (currentSummaryProgress < 85) {
+      setSummaryProgress(currentSummaryProgress + 0.8, "ETAPA 3/4", "A estruturar pontos-chave...", "A sintetizar conceitos principais e argumentos...");
+    } else if (currentSummaryProgress < 96) {
+      setSummaryProgress(currentSummaryProgress + 0.4, "ETAPA 4/4", "A formatar documento final...", "A gerar tabelas, destaques e conclusões...");
+    }
+  }, 250);
+}
+
+function completeSummaryProgress() {
+  clearInterval(summaryProgressInterval);
+  setSummaryProgress(100, "CONCLUÍDO", "Resumo Gerado com Sucesso!", "A renderizar o documento...");
+}
+
+function stopSummaryProgress() {
+  clearInterval(summaryProgressInterval);
+}
+
+let illuProgressInterval = null;
+let currentIlluProgress = 0;
+
+function setIllustrationProgress(percent, status) {
+  currentIlluProgress = percent;
+  if (aiIlluProgressCircle) {
+    const offset = 251 - (251 * Math.min(percent, 100) / 100);
+    aiIlluProgressCircle.style.strokeDashoffset = offset;
+  }
+  if (aiIlluPercent) aiIlluPercent.textContent = `${Math.round(percent)}%`;
+  if (aiIlluProgressBar) aiIlluProgressBar.style.width = `${Math.min(percent, 100)}%`;
+  if (status && aiIlluStatusText) aiIlluStatusText.textContent = status;
+}
+
+function startIllustrationProgress() {
+  clearInterval(illuProgressInterval);
+  setIllustrationProgress(5, "A formular descrição visual com Gemini...");
+
+  illuProgressInterval = setInterval(() => {
+    if (currentIlluProgress < 30) {
+      setIllustrationProgress(currentIlluProgress + 2.5, "A formular descrição visual com Gemini...");
+    } else if (currentIlluProgress < 65) {
+      setIllustrationProgress(currentIlluProgress + 1.8, "A renderizar arte 3D com modelo FLUX...");
+    } else if (currentIlluProgress < 85) {
+      setIllustrationProgress(currentIlluProgress + 1.0, "A refinar iluminação e texturas HD...");
+    } else if (currentIlluProgress < 96) {
+      setIllustrationProgress(currentIlluProgress + 0.4, "A finalizar renderização da imagem...");
+    }
+  }, 200);
+}
+
+function completeIllustrationProgress() {
+  clearInterval(illuProgressInterval);
+  setIllustrationProgress(100, "Ilustração Gerada com Sucesso!");
+}
+
+function stopIllustrationProgress() {
+  clearInterval(illuProgressInterval);
+}
 
 const apiKeyStatusBadge = document.getElementById('apiKeyStatusBadge');
 const settingsModal = document.getElementById('settingsModal');
@@ -143,6 +236,7 @@ const apiKeyInput = document.getElementById('apiKeyInput');
 // Elementos de Gestão de Projetos & Auto-Save
 const openProjectsBtn = document.getElementById('openProjectsBtn');
 const projectsCountBadge = document.getElementById('projectsCountBadge');
+
 const projectsModal = document.getElementById('projectsModal');
 const closeProjectsBtn = document.getElementById('closeProjectsBtn');
 const closeProjectsModalFooterBtn = document.getElementById('closeProjectsModalFooterBtn');
@@ -438,13 +532,8 @@ generateBtn.addEventListener('click', async () => {
   // Limpar estado da ilustração anterior para novo pedido
   resetAiIllustrationState();
 
-  if (currentInputMode === "url") {
-    loadingTitle.textContent = "A extrair e processar link...";
-    loadingDesc.textContent = "A analisar transcrições/conteúdo e a estruturar o resumo.";
-  } else {
-    loadingTitle.textContent = "A analisar ficheiro com IA...";
-    loadingDesc.textContent = "A examinar imagem, vídeo e texto para gerar a síntese.";
-  }
+  // Iniciar animação do loader com percentagem e etapas
+  startSummaryProgress(currentInputMode);
 
   try {
     let res;
@@ -476,11 +565,18 @@ generateBtn.addEventListener('click', async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Erro ao processar o conteúdo.");
 
+    // Finalizar loader em 100%
+    completeSummaryProgress();
+    await new Promise(r => setTimeout(r, 400));
+
     currentMarkdown = data.markdown;
     currentTitle = data.title || "Resumo de Conteúdo";
+    currentProjectId = null;
 
     summaryPreview.innerHTML = marked.parse(currentMarkdown);
     if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
+
+    triggerAutoSave();
 
     loadingState.classList.add('hidden');
     summaryPreview.classList.remove('hidden');
@@ -492,6 +588,7 @@ generateBtn.addEventListener('click', async () => {
 
   } catch (err) {
     console.error(err);
+    stopSummaryProgress();
     loadingState.classList.add('hidden');
     emptyState.classList.remove('hidden');
     showToast(err.message, true);
@@ -499,6 +596,7 @@ generateBtn.addEventListener('click', async () => {
     generateBtn.disabled = false;
   }
 });
+
 
 // =========================================================
 // IMPRESSÃO A4 COM PAGINAÇÃO INTELIGENTE
@@ -1007,6 +1105,9 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
   aiIlluImg.classList.add('hidden');
   generateAiIllustrationBtn.disabled = true;
 
+  // Iniciar barra de progresso visual com percentagem
+  startIllustrationProgress();
+
   try {
     // 1. Obter prompt visual otimizado em inglês pelo Gemini
     const res = await fetch('/api/generate-illustration', {
@@ -1034,6 +1135,9 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
     if (window.puter && window.puter.ai && typeof window.puter.ai.txt2img === 'function') {
       try {
         const generatedImgElement = await puter.ai.txt2img(promptToRender);
+        completeIllustrationProgress();
+        await new Promise(r => setTimeout(r, 400));
+
         currentGeneratedImageUrl = generatedImgElement.src;
         aiIlluImg.src = currentGeneratedImageUrl;
         aiIlluImg.classList.remove('hidden');
@@ -1051,7 +1155,10 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
     // 3. Fallback Direto
     currentGeneratedImageUrl = data.image_url;
     const tempImg = new Image();
-    tempImg.onload = () => {
+    tempImg.onload = async () => {
+      completeIllustrationProgress();
+      await new Promise(r => setTimeout(r, 400));
+
       aiIlluImg.src = currentGeneratedImageUrl;
       aiIlluImg.classList.remove('hidden');
       aiIlluLoading.classList.add('hidden');
@@ -1061,6 +1168,7 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
       showToast("Ilustração gerada com sucesso!");
     };
     tempImg.onerror = () => {
+      stopIllustrationProgress();
       aiIlluLoading.classList.add('hidden');
       aiIlluEmpty.classList.remove('hidden');
       generateAiIllustrationBtn.disabled = false;
@@ -1070,6 +1178,7 @@ generateAiIllustrationBtn.addEventListener('click', async () => {
 
   } catch (err) {
     console.error(err);
+    stopIllustrationProgress();
     aiIlluLoading.classList.add('hidden');
     aiIlluEmpty.classList.remove('hidden');
     generateAiIllustrationBtn.disabled = false;

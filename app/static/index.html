@@ -338,17 +338,33 @@
               </div>
             </div>
 
-            <!-- Estado de Carregamento (Loading) -->
-            <div id="loadingState" class="hidden h-full min-h-[380px] flex flex-col items-center justify-center text-center p-8 space-y-4">
-              <div class="relative w-16 h-16">
-                <div class="w-16 h-16 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
-                <div class="absolute inset-0 flex items-center justify-center text-brand-600">
-                  <i data-lucide="brain" class="w-6 h-6 animate-pulse"></i>
+            <!-- Estado de Carregamento com Percentagem % (Loading) -->
+            <div id="loadingState" class="hidden h-full min-h-[380px] flex flex-col items-center justify-center text-center p-8 space-y-5">
+              <!-- Spinner Circular com Percentagem Central -->
+              <div class="relative w-24 h-24 flex items-center justify-center">
+                <!-- SVG Circular Progress Bar (Circunferência = 2 * PI * 42 ≈ 264) -->
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="7" class="text-slate-100" fill="transparent" />
+                  <circle id="summaryProgressCircle" cx="50" cy="50" r="42" stroke="currentColor" stroke-width="7" class="text-brand-600 transition-all duration-300 ease-out" fill="transparent" stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="summaryProgressPercent" class="text-xl font-black text-slate-900 font-mono tracking-tight">0%</span>
+                  <span class="text-[9px] font-bold text-brand-700 uppercase tracking-widest">IA</span>
                 </div>
               </div>
-              <div>
-                <h3 id="loadingTitle" class="font-semibold text-slate-800 text-base">A processar conteúdo...</h3>
-                <p id="loadingDesc" class="text-xs text-slate-500 mt-1">A IA está a analisar o conteúdo e a gerar o resumo estruturado.</p>
+
+              <!-- Barra Linear de Progresso & Textos de Etapa -->
+              <div class="w-full max-w-sm space-y-2">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                  <span id="loadingTitle">A processar conteúdo...</span>
+                  <span id="loadingStageTag" class="text-[10px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 font-mono font-bold">ETAPA 1/4</span>
+                </div>
+                
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+                  <div id="summaryProgressBar" class="bg-gradient-to-r from-brand-600 to-teal-500 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                </div>
+
+                <p id="loadingDesc" class="text-xs text-slate-500 pt-1">A inicializar análise com inteligência artificial...</p>
               </div>
             </div>
 
@@ -506,11 +522,27 @@
 
       <!-- Área de Visualização da Imagem -->
       <div class="relative bg-slate-900 rounded-2xl overflow-hidden min-h-[260px] flex items-center justify-center border border-slate-800">
-        <!-- Loading Spinner -->
-        <div id="aiIlluLoading" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-10 space-y-3">
-          <div class="w-12 h-12 rounded-full border-4 border-teal-500/20 border-t-teal-400 animate-spin"></div>
-          <p class="text-sm font-semibold text-white">A gerar ilustração com FLUX AI...</p>
-          <p class="text-xs text-slate-400 max-w-xs">Geralmente demora entre 5 a 15 segundos.</p>
+        <!-- Loading com Percentagem % -->
+        <div id="aiIlluLoading" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
+          <!-- Circular Progress Spinner com % -->
+          <div class="relative w-20 h-20 flex items-center justify-center">
+            <!-- Circunferência = 2 * PI * 40 ≈ 251 -->
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="text-slate-800" fill="transparent" />
+              <circle id="aiIlluProgressCircle" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="text-teal-400 transition-all duration-200 ease-out" fill="transparent" stroke-dasharray="251" stroke-dashoffset="251" stroke-linecap="round" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span id="aiIlluPercent" class="text-lg font-black text-white font-mono">0%</span>
+            </div>
+          </div>
+
+          <div class="w-full max-w-xs space-y-1.5">
+            <p id="aiIlluStatusText" class="text-xs font-bold text-white">A renderizar ilustração com FLUX AI...</p>
+            <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+              <div id="aiIlluProgressBar" class="bg-gradient-to-r from-teal-400 to-emerald-400 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
+            </div>
+            <p class="text-[10px] text-slate-400 font-mono">Geração de arte digital 3D em alta resolução</p>
+          </div>
         </div>
 
         <!-- Imagem Gerada -->
