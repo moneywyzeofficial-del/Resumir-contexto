@@ -6,12 +6,15 @@ let currentMarkdown = "";
 let currentViewTab = "preview";
 let activeVisualTemplate = "infographic";
 let easyMDEInstance = null;
+let currentProjectId = null;
 
 // Inicialização da Página
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
   checkApiStatus();
   initEasyMDE();
+  updateProjectsBadge();
+  checkDraftRecovery();
 });
 
 // Inicializar Editor Rico Open-Source EasyMDE
@@ -36,6 +39,7 @@ function initEasyMDE() {
     easyMDEInstance.codemirror.on("change", () => {
       currentMarkdown = easyMDEInstance.value();
       updateTitleFromMarkdown();
+      triggerAutoSave();
     });
   }
 }
@@ -48,6 +52,23 @@ function updateTitleFromMarkdown() {
     }
   }
 }
+
+function triggerAutoSave() {
+  if (currentMarkdown && currentMarkdown.trim().length > 10) {
+    const draft = {
+      id: currentProjectId || 'draft_temp',
+      title: currentTitle,
+      markdown: currentMarkdown,
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem('resumos_active_draft', JSON.stringify(draft));
+    } catch (e) {
+      console.warn("Falha no auto-save:", e);
+    }
+  }
+}
+
 
 // Elementos do DOM
 const modeFileBtn = document.getElementById('modeFileBtn');
@@ -116,11 +137,28 @@ let currentGeneratedImageUrl = "";
 
 const apiKeyStatusBadge = document.getElementById('apiKeyStatusBadge');
 const settingsModal = document.getElementById('settingsModal');
-const openSettingsBtn = document.getElementById('openSettingsBtn');
-const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
 const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
 const apiKeyInput = document.getElementById('apiKeyInput');
+
+// Elementos de Gestão de Projetos & Auto-Save
+const openProjectsBtn = document.getElementById('openProjectsBtn');
+const projectsCountBadge = document.getElementById('projectsCountBadge');
+const projectsModal = document.getElementById('projectsModal');
+const closeProjectsBtn = document.getElementById('closeProjectsBtn');
+const closeProjectsModalFooterBtn = document.getElementById('closeProjectsModalFooterBtn');
+const saveProjectBtn = document.getElementById('saveProjectBtn');
+const saveCurrentAsProjectBtn = document.getElementById('saveCurrentAsProjectBtn');
+const newBlankProjectBtn = document.getElementById('newBlankProjectBtn');
+const importProjectJsonBtn = document.getElementById('importProjectJsonBtn');
+const importProjectFileInput = document.getElementById('importProjectFileInput');
+const projectsListContainer = document.getElementById('projectsListContainer');
+const noProjectsEmptyState = document.getElementById('noProjectsEmptyState');
+
+const draftRestoreBanner = document.getElementById('draftRestoreBanner');
+const draftRestoreDesc = document.getElementById('draftRestoreDesc');
+const restoreDraftBtn = document.getElementById('restoreDraftBtn');
+const discardDraftBtn = document.getElementById('discardDraftBtn');
+
 
 // Toast Notification
 function showToast(message, isError = false) {
@@ -1033,4 +1071,339 @@ downloadAiIllustrationBtn.addEventListener('click', async () => {
     window.open(currentGeneratedImageUrl, '_blank');
   }
 });
+
+// =========================================================
+// SISTEMA DE GESTÃO DE PROJETOS, RASCUNHOS & BACKUP
+// =========================================================
+
+function getSavedProjects() {
+  try {
+    const raw = localStorage.getItem('resumos_projects');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Erro ao ler projetos:", e);
+    return [];
+  }
+}
+
+function persistProjects(list) {
+  try {
+    localStorage.setItem('resumos_projects', JSON.stringify(list));
+    updateProjectsBadge();
+  } catch (e) {
+    console.error("Erro ao guardar lista de projetos:", e);
+    showToast("Aviso: Limite de armazenamento local atingido.", true);
+  }
+}
+
+function updateProjectsBadge() {
+  const projects = getSavedProjects();
+  if (projectsCountBadge) {
+    if (projects.length > 0) {
+      projectsCountBadge.textContent = projects.length;
+      projectsCountBadge.classList.remove('hidden');
+    } else {
+      projectsCountBadge.classList.add('hidden');
+    }
+  }
+}
+
+// Verificar Rascunho Não Finalizado ao Abrir a Aplicação
+function checkDraftRecovery() {
+  try {
+    const draftRaw = localStorage.getItem('resumos_active_draft');
+    if (!draftRaw) return;
+
+    const draft = JSON.parse(draftRaw);
+    if (!draft || !draft.markdown || draft.markdown.trim().length < 15) return;
+
+    // Se a app ainda estiver no estado vazio, mostrar banner de recuperação
+    if (!currentMarkdown) {
+      const dateObj = new Date(draft.updatedAt || Date.now());
+      const dateStr = dateObj.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      draftRestoreDesc.textContent = `Projeto: "${draft.title || 'Sem título'}" guardado automaticamente em ${dateStr}.`;
+      draftRestoreBanner.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+  } catch (e) {
+    console.warn("Erro ao verificar rascunho:", e);
+  }
+}
+
+// Restaurar Rascunho
+restoreDraftBtn.addEventListener('click', () => {
+  try {
+    const draft = JSON.parse(localStorage.getItem('resumos_active_draft'));
+    if (!draft) return;
+
+    currentMarkdown = draft.markdown;
+    currentTitle = draft.title || "Resumo Restaurado";
+    currentProjectId = draft.id !== 'draft_temp' ? draft.id : null;
+
+    if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
+    summaryPreview.innerHTML = marked.parse(currentMarkdown);
+
+    emptyState.classList.add('hidden');
+    loadingState.classList.add('hidden');
+    summaryPreview.classList.remove('hidden');
+    exportToolbar.classList.remove('hidden');
+    viewTabs.classList.remove('hidden');
+    draftRestoreBanner.classList.add('hidden');
+
+    showToast("Trabalho restaurado com sucesso!");
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao restaurar rascunho.", true);
+  }
+});
+
+// Descartar Rascunho
+discardDraftBtn.addEventListener('click', () => {
+  localStorage.removeItem('resumos_active_draft');
+  draftRestoreBanner.classList.add('hidden');
+  showToast("Rascunho descartado.");
+});
+
+// Guardar Projeto Atual
+function saveCurrentProject() {
+  const contentToSave = currentViewTab === "edit" && easyMDEInstance ? easyMDEInstance.value() : currentMarkdown;
+  if (!contentToSave || contentToSave.trim().length < 5) {
+    showToast("Não há conteúdo para guardar no projeto.", true);
+    return;
+  }
+
+  updateTitleFromMarkdown();
+  const projects = getSavedProjects();
+  const now = new Date().toISOString();
+
+  let targetId = currentProjectId;
+  let existingIndex = targetId ? projects.findIndex(p => p.id === targetId) : -1;
+
+  if (existingIndex >= 0) {
+    // Atualizar projeto existente
+    projects[existingIndex].title = currentTitle;
+    projects[existingIndex].markdown = contentToSave;
+    projects[existingIndex].updatedAt = now;
+    projects[existingIndex].illustrationUrl = currentGeneratedImageUrl || projects[existingIndex].illustrationUrl || "";
+  } else {
+    // Criar novo projeto
+    targetId = 'proj_' + Date.now();
+    currentProjectId = targetId;
+    projects.unshift({
+      id: targetId,
+      title: currentTitle,
+      markdown: contentToSave,
+      updatedAt: now,
+      sourceUrl: currentInputMode === 'url' ? websiteUrlInput.value.trim() : (currentFile ? currentFile.name : ""),
+      illustrationUrl: currentGeneratedImageUrl || ""
+    });
+  }
+
+  persistProjects(projects);
+  triggerAutoSave();
+  showToast(`Projeto "${currentTitle}" guardado com sucesso!`);
+  renderProjectsList();
+}
+
+saveProjectBtn.addEventListener('click', saveCurrentProject);
+saveCurrentAsProjectBtn.addEventListener('click', saveCurrentProject);
+
+// Criar Novo Projeto em Branco
+newBlankProjectBtn.addEventListener('click', () => {
+  currentProjectId = 'proj_' + Date.now();
+  currentTitle = "Novo Resumo";
+  currentMarkdown = "# Novo Resumo\n\n## 📌 Introdução\nEscreve aqui o teu resumo ou notas...\n";
+  
+  if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
+  summaryPreview.innerHTML = marked.parse(currentMarkdown);
+
+  emptyState.classList.add('hidden');
+  loadingState.classList.add('hidden');
+  summaryPreview.classList.add('hidden');
+  editorWrapper.classList.remove('hidden');
+  exportToolbar.classList.remove('hidden');
+  viewTabs.classList.remove('hidden');
+
+  // Selecionar separador de Edição
+  currentViewTab = "edit";
+  tabEdit.className = "px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all flex items-center gap-1.5";
+  tabPreview.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
+
+  resetAiIllustrationState();
+  triggerAutoSave();
+  projectsModal.classList.add('hidden');
+  showToast("Novo projeto em branco pronto para edição.");
+});
+
+// Renderizar Lista de Projetos no Modal
+function renderProjectsList() {
+  const projects = getSavedProjects();
+  projectsListContainer.innerHTML = "";
+
+  if (projects.length === 0) {
+    noProjectsEmptyState.classList.remove('hidden');
+    return;
+  }
+  noProjectsEmptyState.classList.add('hidden');
+
+  projects.forEach((proj) => {
+    const card = document.createElement('div');
+    card.className = "p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all space-y-2.5";
+
+    const dateObj = new Date(proj.updatedAt);
+    const dateFormatted = dateObj.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const plainSnippet = proj.markdown
+      .replace(/^#+\s+/gm, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/[*_`]/g, '')
+      .slice(0, 140) + '...';
+
+    card.innerHTML = `
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div class="space-y-1 flex-1 min-w-[200px]">
+          <div class="flex items-center gap-2">
+            <h4 class="font-bold text-slate-900 text-sm hover:text-brand-700 cursor-pointer project-open-title">${proj.title || 'Sem título'}</h4>
+            ${proj.id === currentProjectId ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">Ativo</span>' : ''}
+          </div>
+          <p class="text-[11px] text-slate-400 font-medium">Última alteração: ${dateFormatted} ${proj.sourceUrl ? `• Fonte: ${proj.sourceUrl.slice(0, 30)}...` : ''}</p>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button class="project-open-btn px-3 py-1.5 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1" data-id="${proj.id}">
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>Abrir</span>
+          </button>
+          <button class="project-export-btn p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors" title="Exportar Backup JSON" data-id="${proj.id}">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+          <button class="project-delete-btn p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar Projeto" data-id="${proj.id}">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">${plainSnippet}</p>
+    `;
+
+    // Eventos dos botões do cartão
+    card.querySelector('.project-open-btn').addEventListener('click', () => loadProject(proj.id));
+    card.querySelector('.project-open-title').addEventListener('click', () => loadProject(proj.id));
+    card.querySelector('.project-export-btn').addEventListener('click', () => exportSingleProjectJson(proj.id));
+    card.querySelector('.project-delete-btn').addEventListener('click', () => deleteProject(proj.id));
+
+    projectsListContainer.appendChild(card);
+  });
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// Carregar Projeto Selecionado
+function loadProject(projectId) {
+  const projects = getSavedProjects();
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) {
+    showToast("Projeto não encontrado.", true);
+    return;
+  }
+
+  currentProjectId = proj.id;
+  currentTitle = proj.title;
+  currentMarkdown = proj.markdown;
+
+  if (easyMDEInstance) easyMDEInstance.value(currentMarkdown);
+  summaryPreview.innerHTML = marked.parse(currentMarkdown);
+
+  emptyState.classList.add('hidden');
+  loadingState.classList.add('hidden');
+  summaryPreview.classList.remove('hidden');
+  editorWrapper.classList.add('hidden');
+  exportToolbar.classList.remove('hidden');
+  viewTabs.classList.remove('hidden');
+  draftRestoreBanner.classList.add('hidden');
+
+  currentViewTab = "preview";
+  tabPreview.className = "px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm transition-all flex items-center gap-1.5";
+  tabEdit.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
+
+  triggerAutoSave();
+  projectsModal.classList.add('hidden');
+  showToast(`Projeto "${proj.title}" carregado com sucesso!`);
+  if (window.lucide) lucide.createIcons();
+}
+
+// Eliminar Projeto
+function deleteProject(projectId) {
+  if (!confirm("Tens a certeza de que queres eliminar este projeto guardado?")) return;
+
+  let projects = getSavedProjects();
+  projects = projects.filter(p => p.id !== projectId);
+  persistProjects(projects);
+
+  if (currentProjectId === projectId) {
+    currentProjectId = null;
+  }
+
+  renderProjectsList();
+  showToast("Projeto eliminado.");
+}
+
+// Exportar Backup JSON de um Projeto
+function exportSingleProjectJson(projectId) {
+  const projects = getSavedProjects();
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(proj, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", dataStr);
+  const cleanName = (proj.title || 'projeto').replace(/[^a-zA-Z0-9_-]/g, '_');
+  downloadAnchor.setAttribute("download", `${cleanName}_backup.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+  showToast("Ficheiro de backup JSON descarregado!");
+}
+
+// Importar Backup JSON
+importProjectJsonBtn.addEventListener('click', () => importProjectFileInput.click());
+importProjectFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const imported = JSON.parse(event.target.result);
+      if (!imported.title || !imported.markdown) {
+        throw new Error("Formato de ficheiro de projeto inválido.");
+      }
+
+      const projects = getSavedProjects();
+      imported.id = 'proj_' + Date.now();
+      imported.updatedAt = new Date().toISOString();
+      projects.unshift(imported);
+      persistProjects(projects);
+      
+      renderProjectsList();
+      showToast(`Projeto "${imported.title}" importado com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao importar ficheiro: " + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+  importProjectFileInput.value = '';
+});
+
+// Abertura e Fecho do Modal de Projetos
+openProjectsBtn.addEventListener('click', () => {
+  renderProjectsList();
+  projectsModal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+});
+
+const closeProjectsModal = () => projectsModal.classList.add('hidden');
+closeProjectsBtn.addEventListener('click', closeProjectsModal);
+closeProjectsModalFooterBtn.addEventListener('click', closeProjectsModal);
+
 
