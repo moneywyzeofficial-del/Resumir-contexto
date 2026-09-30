@@ -619,6 +619,43 @@ function renderVisualCanvas(style) {
         </div>
       </div>
     `;
+  } else if (style === "breakdown") {
+    html = `
+      <div class="template-breakdown p-8 space-y-6 rounded-2xl">
+        <div class="border-b border-sky-500/30 pb-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-950/80 border border-sky-400/40 text-[11px] font-mono text-sky-300 font-bold uppercase tracking-wider mb-2">
+            <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+            SCHEMATIC // CONCEPT BREAKDOWN
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">${currentTitle}</h1>
+          <p class="text-xs text-sky-200/70 mt-1">Anatomia Estruturada • ${nowStr}</p>
+        </div>
+        <div class="space-y-4">
+          ${sections.map((sec, idx) => `
+            <div class="breakdown-card p-5 border border-sky-500/30">
+              <div class="flex items-center justify-between border-b border-slate-700/60 pb-2.5 mb-3">
+                <div class="flex items-center gap-3">
+                  <span class="breakdown-badge text-xs px-2.5 py-1 rounded-lg">#0${idx + 1}</span>
+                  <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wide">${sec.title}</h3>
+                </div>
+                <span class="text-[11px] font-mono text-slate-400">NODE_MODULE</span>
+              </div>
+              ${sec.text ? `<p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-3 pl-2 border-l-2 border-sky-500/40">${sec.text}</p>` : ''}
+              ${sec.items.length > 0 ? `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  ${sec.items.map(item => `
+                    <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-xs text-slate-200 flex items-start gap-2">
+                      <span class="text-sky-400 font-mono font-bold">›</span>
+                      <span>${item}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
   visualCanvasContainer.innerHTML = html;

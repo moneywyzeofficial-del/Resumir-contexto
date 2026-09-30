@@ -233,6 +233,31 @@ body {
   color: #d29922;
 }
 
+/* 8. Estilo Breakdown / Esquema Técnico (Blueprint) */
+.template-breakdown {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
+  border: 2px solid #334155;
+}
+.breakdown-card {
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 16px;
+  position: relative;
+}
+.breakdown-badge {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0d9488 100%);
+  color: #ffffff;
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.35);
+}
+.breakdown-line {
+  border-left: 2px dashed rgba(56, 189, 248, 0.4);
+}
+
 /* Personalização do EasyMDE */
 .EasyMDEContainer .editor-toolbar {
   border-top-left-radius: 12px;
