@@ -337,6 +337,9 @@ generateBtn.addEventListener('click', async () => {
   viewTabs.classList.add('hidden');
   loadingState.classList.remove('hidden');
 
+  // Limpar estado da ilustração anterior para novo pedido
+  resetAiIllustrationState();
+
   if (currentInputMode === "url") {
     loadingTitle.textContent = "A extrair e processar link...";
     loadingDesc.textContent = "A analisar transcrições/conteúdo e a estruturar o resumo.";
@@ -851,6 +854,20 @@ copyBtn.addEventListener('click', async () => {
 // =========================================================
 // GERADOR DE ILUSTRAÇÃO IA (POLLINATIONS / FLUX)
 // =========================================================
+function resetAiIllustrationState() {
+  currentGeneratedImageUrl = "";
+  if (aiIlluPrompt) aiIlluPrompt.value = "";
+  if (aiIlluImg) {
+    aiIlluImg.src = "";
+    aiIlluImg.classList.add('hidden');
+  }
+  if (aiIlluLoading) aiIlluLoading.classList.add('hidden');
+  if (aiIlluEmpty) aiIlluEmpty.classList.remove('hidden');
+  if (insertBannerBtn) insertBannerBtn.classList.add('hidden');
+  if (downloadAiIllustrationBtn) downloadAiIllustrationBtn.classList.add('hidden');
+  if (generateAiIllustrationBtn) generateAiIllustrationBtn.disabled = false;
+}
+
 openAiIllustrationBtn.addEventListener('click', () => {
   if (currentViewTab === "edit" && easyMDEInstance) {
     currentMarkdown = easyMDEInstance.value();
